@@ -487,7 +487,7 @@ async function startServer() {
 
   // 5. Smart Voter Entry with Double-Entry Protection
   app.post("/api/voters/register", async (req, res) => {
-    const { name, email, address, comment, nik, districtCode, villageCode, villageClade, lat, lng, phone_number, isHighInfluence, mainIssue, competitorActivity } = req.body;
+    const { name, email, address, detected_address, comment, nik, districtCode, villageCode, villageClade, lat, lng, phone_number, isHighInfluence, mainIssue, competitorActivity } = req.body;
     const tenantId = (req as any).tenantId;
     const uid = (req as any).uid;
 
@@ -528,6 +528,7 @@ async function startServer() {
         name,
         email,
         address,
+        detected_address: detected_address || null,
         comment,
         nik_encrypted,
         districtCode,
@@ -568,7 +569,7 @@ async function startServer() {
     const {
       voter_name, voter_nik, voter_phone, volunteer_name, pekerjaan,
       loyalty_score, sentiment_score, voter_status, issue_tag, photo_url,
-      latitude, longitude
+      latitude, longitude, detected_address
     } = req.body;
 
     if (!voter_name) {
@@ -591,6 +592,7 @@ async function startServer() {
         photo_url:        photo_url        || null,
         latitude:         latitude         ?? null,
         longitude:        longitude        ?? null,
+        detected_address: detected_address || null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 

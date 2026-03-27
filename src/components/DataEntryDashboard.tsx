@@ -23,6 +23,7 @@ import {
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ProfessionSelect } from './ProfessionSelect';
+import { getAddressFromCoords, type GeoAddress } from '../lib/geocoding';
 
 export const BulkUploadComponent: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -163,6 +164,8 @@ export const VoterInputForm: React.FC = () => {
   });
   const [gpsState, setGpsState] = useState<GpsState>('idle');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [detectedAddress, setDetectedAddress] = useState<GeoAddress | null>(null);
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [showReview, setShowReview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -171,6 +174,15 @@ export const VoterInputForm: React.FC = () => {
   useEffect(() => {
     fetchGps();
   }, []);
+
+  useEffect(() => {
+    if (!location) return;
+    setGeoStatus('loading');
+    setDetectedAddress(null);
+    getAddressFromCoords(location.lat, location.lng)
+      .then(addr => { setDetectedAddress(addr); setGeoStatus('done'); })
+      .catch(() => setGeoStatus('error'));
+  }, [location]);
 
   const fetchGps = () => {
     if (!('geolocation' in navigator)) { setGpsState('denied'); return; }
@@ -207,6 +219,7 @@ export const VoterInputForm: React.FC = () => {
         districtCode: fields.kecamatan || 'Tidak Diketahui',
         villageCode: fields.kelurahan || 'Tidak Diketahui',
         address: fields.address,
+        detected_address: detectedAddress?.display ?? null,
         comment: 'Input Manual',
         lat: location?.lat ?? null,
         lng: location?.lng ?? null,
@@ -222,6 +235,8 @@ export const VoterInputForm: React.FC = () => {
         setShowReview(false);
         setFields({ name: '', nik: '', phone: '', pekerjaan: '', kecamatan: '', kelurahan: '', address: '' });
         setLocation(null);
+        setDetectedAddress(null);
+        setGeoStatus('idle');
         fetchGps();
         setTimeout(() => setSuccessMsg(''), 5000);
       }
@@ -267,10 +282,20 @@ export const VoterInputForm: React.FC = () => {
         </div>
       )}
       {gpsState === 'ok' && location && (
-        <div className="mb-4 flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <MapPin className="w-4 h-4 text-green-400 shrink-0" />
-          <p className="text-xs text-green-300 font-mono">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
-          <span className="ml-auto text-[10px] font-bold text-green-400 uppercase">GPS Aktif</span>
+        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-green-400 shrink-0" />
+            {geoStatus === 'loading' ? (
+              <span className="text-xs text-zinc-400 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Memuat alamat...
+              </span>
+            ) : geoStatus === 'done' && detectedAddress ? (
+              <span className="text-xs text-green-300 truncate">{detectedAddress.display}</span>
+            ) : (
+              <span className="text-xs text-green-300 font-mono">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</span>
+            )}
+            <span className="ml-auto text-[10px] font-bold text-green-400 uppercase shrink-0">GPS Aktif</span>
+          </div>
         </div>
       )}
 
@@ -366,21 +391,31 @@ export const VoterInputForm: React.FC = () => {
                   <MapPin className="w-3 h-3" /> Lokasi Terdeteksi
                 </p>
                 {gpsState === 'ok' && location ? (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-zinc-500">Latitude</span>
-                      <span className="font-mono text-green-400">{location.lat.toFixed(6)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-zinc-500">Longitude</span>
-                      <span className="font-mono text-green-400">{location.lng.toFixed(6)}</span>
-                    </div>
-                    {mapsUrl && (
-                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] font-bold text-tenant-primary uppercase tracking-widest hover:underline mt-1">
-                        <Navigation className="w-3 h-3" /> Lihat di Peta
-                      </a>
+                  <div className="space-y-2">
+                    {geoStatus === 'loading' && (
+                      <div className="flex items-center gap-2 text-xs text-zinc-400">
+                        <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                        Koordinat Terkunci (Alamat memuat...)
+                      </div>
                     )}
+                    {geoStatus === 'done' && detectedAddress && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-3 h-3 text-tenant-primary shrink-0 mt-0.5" />
+                        <p className="text-sm font-semibold text-green-300 leading-snug">{detectedAddress.display}</p>
+                      </div>
+                    )}
+                    {geoStatus === 'error' && (
+                      <p className="text-xs text-yellow-400">Alamat tidak tersedia — koordinat tersimpan.</p>
+                    )}
+                    <div className="flex justify-between text-xs pt-1 border-t border-zinc-800/50">
+                      <span className="font-mono text-zinc-500">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</span>
+                      {mapsUrl && (
+                        <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-tenant-primary uppercase tracking-widest hover:underline">
+                          <Navigation className="w-3 h-3" /> Peta
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-yellow-400 flex items-center gap-1">

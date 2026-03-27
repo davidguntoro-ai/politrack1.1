@@ -5,6 +5,7 @@ import {
   Loader2, AlertTriangle, Eye, ArrowLeft, Navigation, Briefcase
 } from 'lucide-react';
 import { ProfessionSelect } from './ProfessionSelect';
+import { getAddressFromCoords, type GeoAddress } from '../lib/geocoding';
 
 interface SurveyModalProps {
   isOpen: boolean;
@@ -39,12 +40,23 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
   });
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [detectedAddress, setDetectedAddress] = useState<GeoAddress | null>(null);
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('idle');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [showReview, setShowReview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!location) return;
+    setGeoStatus('loading');
+    setDetectedAddress(null);
+    getAddressFromCoords(location.lat, location.lng)
+      .then(addr => { setDetectedAddress(addr); setGeoStatus('done'); })
+      .catch(() => setGeoStatus('error'));
+  }, [location]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -119,6 +131,7 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
           photo_url: formData.photo_url,
           latitude: location?.lat ?? null,
           longitude: location?.lng ?? null,
+          detected_address: detectedAddress?.display ?? null,
           tenant_id: tenantId,
         }),
       });
@@ -142,6 +155,8 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
             photo_url: '',
           });
           setLocation(null);
+          setDetectedAddress(null);
+          setGeoStatus('idle');
           setGpsStatus('idle');
         }, 2000);
       } else {
@@ -260,24 +275,34 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
                     </p>
                     {gpsStatus === 'ok' && location ? (
                       <>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-zinc-500">Latitude</span>
-                          <span className="text-sm font-mono text-green-400">{location.lat.toFixed(6)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-zinc-500">Longitude</span>
-                          <span className="text-sm font-mono text-green-400">{location.lng.toFixed(6)}</span>
-                        </div>
-                        {mapsUrl && (
-                          <a
-                            href={mapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-tenant-primary uppercase tracking-widest hover:underline mt-1"
-                          >
-                            <Navigation className="w-3 h-3" /> Lihat di Peta
-                          </a>
+                        {geoStatus === 'loading' && (
+                          <div className="flex items-center gap-2 text-xs text-zinc-400">
+                            <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                            Koordinat Terkunci (Alamat memuat...)
+                          </div>
                         )}
+                        {geoStatus === 'done' && detectedAddress && (
+                          <div className="flex items-start gap-2 pb-1">
+                            <MapPin className="w-3 h-3 text-tenant-primary shrink-0 mt-0.5" />
+                            <p className="text-sm font-semibold text-green-300 leading-snug">{detectedAddress.display}</p>
+                          </div>
+                        )}
+                        {geoStatus === 'error' && (
+                          <p className="text-xs text-yellow-400">Alamat tidak tersedia — koordinat tersimpan.</p>
+                        )}
+                        <div className="flex justify-between items-center pt-1 border-t border-zinc-800/50">
+                          <span className="text-xs font-mono text-zinc-500">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</span>
+                          {mapsUrl && (
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-tenant-primary uppercase tracking-widest hover:underline"
+                            >
+                              <Navigation className="w-3 h-3" /> Peta
+                            </a>
+                          )}
+                        </div>
                       </>
                     ) : (
                       <p className="text-xs text-yellow-400 flex items-center gap-1">
