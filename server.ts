@@ -11,6 +11,7 @@ import firebaseConfig from "./firebase-applet-config.json" with { type: "json" }
 if (!admin.apps.length) {
   admin.initializeApp({
     projectId: firebaseConfig.projectId,
+    databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
   });
 }
 
@@ -22,7 +23,7 @@ import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
 
-const db = getFirestore();
+const db = getFirestore(undefined, firebaseConfig.firestoreDatabaseId || "(default)");
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 const JWT_SECRET = process.env.JWT_SECRET || "politrack-super-secret-key";
 
