@@ -9,10 +9,20 @@ import {
   UserPlus,
   ArrowRight,
   Download,
-  Loader2
+  Loader2,
+  MapPin,
+  AlertTriangle,
+  Eye,
+  ArrowLeft,
+  Navigation,
+  Phone,
+  User,
+  Briefcase,
+  CreditCard
 } from 'lucide-react';
 import axios from 'axios';
 import { PROFESSIONS } from '../types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const BulkUploadComponent: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -135,9 +145,98 @@ export const BulkUploadComponent: React.FC = () => {
   );
 };
 
+type GpsState = 'idle' | 'fetching' | 'ok' | 'denied';
+
+const INPUT_CLS = 'w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all';
+
+const KECAMATAN_OPTIONS = ['Menteng', 'Gambir', 'Sawah Besar', 'Kemayoran', 'Senen', 'Cempaka Putih', 'Johar Baru', 'Tanah Abang', 'Palmerah', 'Grogol Petamburan', 'Tambora', 'Taman Sari', 'Penjaringan', 'Pademangan', 'Koja', 'Cilincing', 'Kelapa Gading', 'Tanjung Priok', 'Pulo Gadung', 'Jatinegara', 'Duren Sawit', 'Kramat Jati', 'Makasar', 'Pasar Rebo', 'Ciracas', 'Cipayung', 'Jagakarsa', 'Pasar Minggu', 'Pesanggrahan', 'Cilandak', 'Kebayoran Baru', 'Kebayoran Lama', 'Pesanggrahan', 'Mampang Prapatan', 'Pancoran', 'Tebet', 'Setiabudi'];
+
 export const VoterInputForm: React.FC = () => {
+  const [fields, setFields] = useState({
+    name: '',
+    nik: '',
+    phone: '',
+    pekerjaan: '',
+    kecamatan: '',
+    kelurahan: '',
+    address: '',
+  });
+  const [gpsState, setGpsState] = useState<GpsState>('idle');
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showReview, setShowReview] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    fetchGps();
+  }, []);
+
+  const fetchGps = () => {
+    if (!('geolocation' in navigator)) { setGpsState('denied'); return; }
+    setGpsState('fetching');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsState('ok');
+      },
+      () => setGpsState('denied'),
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  const set = (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setFields(p => ({ ...p, [k]: e.target.value }));
+
+  const handleSimpan = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setShowReview(true);
+  };
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    setErrorMsg('');
+    try {
+      const token = localStorage.getItem('politrack_token');
+      const res = await axios.post('/api/voters/register', {
+        name: fields.name,
+        nik: fields.nik,
+        phone_number: fields.phone,
+        pekerjaan: fields.pekerjaan,
+        districtCode: fields.kecamatan || 'Tidak Diketahui',
+        villageCode: fields.kelurahan || 'Tidak Diketahui',
+        address: fields.address,
+        comment: 'Input Manual',
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+      }, {
+        headers: {
+          'x-tenant-id': 'tenant_1',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        setSuccessMsg(`Pemilih "${fields.name}" berhasil disimpan ke database.`);
+        setShowReview(false);
+        setFields({ name: '', nik: '', phone: '', pekerjaan: '', kecamatan: '', kelurahan: '', address: '' });
+        setLocation(null);
+        setGpsState('idle');
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || err.response?.data?.error || 'Gagal menyimpan data.';
+      setErrorMsg(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const mapsUrl = location ? `https://www.google.com/maps?q=${location.lat},${location.lng}` : null;
+
   return (
-    <div className="dashboard-card">
+    <div className="dashboard-card relative">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-tenant-primary/10 text-tenant-primary">
           <UserPlus className="w-5 h-5" />
@@ -147,44 +246,179 @@ export const VoterInputForm: React.FC = () => {
           <p className="text-2xl font-bold">Data Pemilih Baru</p>
         </div>
       </div>
-      <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {successMsg && (
+        <div className="mb-4 flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {successMsg}
+        </div>
+      )}
+
+      {gpsState === 'denied' && (
+        <div className="mb-4 flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+          <p className="text-xs text-yellow-300">Mohon aktifkan GPS untuk akurasi data pemetaan.</p>
+          <button onClick={fetchGps} className="ml-auto text-[10px] font-bold uppercase text-yellow-400 hover:underline">Coba Lagi</button>
+        </div>
+      )}
+      {gpsState === 'fetching' && (
+        <div className="mb-4 flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+          <Loader2 className="w-4 h-4 text-tenant-primary animate-spin shrink-0" />
+          <p className="text-xs text-zinc-400">Mendeteksi lokasi GPS otomatis...</p>
+        </div>
+      )}
+      {gpsState === 'ok' && location && (
+        <div className="mb-4 flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <MapPin className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-xs text-green-300 font-mono">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+          <span className="ml-auto text-[10px] font-bold text-green-400 uppercase">GPS Aktif</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSimpan} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-xs font-bold text-zinc-500 uppercase">Nama Lengkap</label>
-          <input type="text" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all" placeholder="Contoh: Budi Santoso" />
+          <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><User className="w-3 h-3" /> Nama Lengkap *</label>
+          <input required type="text" value={fields.name} onChange={set('name')} className={INPUT_CLS} placeholder="Contoh: Budi Santoso" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-zinc-500 uppercase">NIK</label>
-          <input type="text" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all" placeholder="16 Digit NIK" />
+          <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><CreditCard className="w-3 h-3" /> NIK *</label>
+          <input required type="text" maxLength={16} value={fields.nik} onChange={set('nik')} className={INPUT_CLS + ' font-mono'} placeholder="16 Digit NIK" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-zinc-500 uppercase">Pekerjaan</label>
-          <select className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all">
+          <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><Phone className="w-3 h-3" /> No. HP</label>
+          <input type="tel" value={fields.phone} onChange={set('phone')} className={INPUT_CLS + ' font-mono'} placeholder="08xxxxxxxxxx" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3" /> Pekerjaan</label>
+          <select value={fields.pekerjaan} onChange={set('pekerjaan')} className={INPUT_CLS}>
             <option value="">Pilih Pekerjaan</option>
-            {PROFESSIONS.map(job => (
-              <option key={job} value={job}>{job}</option>
-            ))}
+            {PROFESSIONS.map(job => <option key={job} value={job}>{job}</option>)}
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-zinc-500 uppercase">Kecamatan</label>
-          <select className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all">
-            <option>Pilih Kecamatan</option>
-            <option>Menteng</option>
-            <option>Gambir</option>
+          <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><MapPin className="w-3 h-3" /> Kecamatan</label>
+          <select value={fields.kecamatan} onChange={set('kecamatan')} className={INPUT_CLS}>
+            <option value="">Pilih Kecamatan</option>
+            {KECAMATAN_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-zinc-500 uppercase">Kelurahan</label>
-          <select className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm focus:border-tenant-primary focus:outline-none transition-all">
-            <option>Pilih Kelurahan</option>
-          </select>
+          <input type="text" value={fields.kelurahan} onChange={set('kelurahan')} className={INPUT_CLS} placeholder="Nama kelurahan" />
+        </div>
+        <div className="md:col-span-2 space-y-1">
+          <label className="text-xs font-bold text-zinc-500 uppercase">Alamat Lengkap</label>
+          <input type="text" value={fields.address} onChange={set('address')} className={INPUT_CLS} placeholder="Jl. Contoh No. 1, RT 01/RW 02" />
         </div>
         <div className="md:col-span-2 mt-2">
-          <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2">
-            <Plus className="w-4 h-4" /> Simpan Data Pemilih
+          <button
+            type="submit"
+            disabled={gpsState === 'fetching'}
+            className="w-full py-3 bg-tenant-primary hover:bg-tenant-primary/90 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Eye className="w-4 h-4" /> Review & Simpan Data Pemilih
           </button>
         </div>
       </form>
+
+      <AnimatePresence>
+        {showReview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-zinc-900/95 backdrop-blur-sm rounded-2xl z-10 flex flex-col p-6 overflow-y-auto"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-tenant-primary/10 text-tenant-primary">
+                <Eye className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">Konfirmasi Data</h3>
+                <p className="text-xl font-bold">Review Sebelum Simpan</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 flex-1">
+              <div className="bg-zinc-950 rounded-xl p-4 border border-zinc-800 space-y-2">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Identitas Pemilih</p>
+                {([['Nama', fields.name], ['NIK', fields.nik], ['No. HP', fields.phone]] as [string, string][]).map(([k, v]) => (
+                  <div key={k} className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-500">{k}</span>
+                    <span className={`font-bold ${k === 'NIK' ? 'font-mono' : ''}`}>{v || '—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-zinc-950 rounded-xl p-4 border border-zinc-800 space-y-2">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Profil & Wilayah</p>
+                {([['Pekerjaan', fields.pekerjaan], ['Kecamatan', fields.kecamatan], ['Kelurahan', fields.kelurahan], ['Alamat', fields.address]] as [string, string][]).map(([k, v]) => (
+                  <div key={k} className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-500">{k}</span>
+                    <span className="font-bold text-right max-w-[60%] truncate">{v || '—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`rounded-xl p-4 border space-y-2 ${gpsState === 'ok' ? 'bg-green-500/5 border-green-500/20' : 'bg-yellow-500/5 border-yellow-500/20'}`}>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> Lokasi Terdeteksi
+                </p>
+                {gpsState === 'ok' && location ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-zinc-500">Latitude</span>
+                      <span className="font-mono text-green-400">{location.lat.toFixed(6)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-zinc-500">Longitude</span>
+                      <span className="font-mono text-green-400">{location.lng.toFixed(6)}</span>
+                    </div>
+                    {mapsUrl && (
+                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-tenant-primary uppercase tracking-widest hover:underline mt-1">
+                        <Navigation className="w-3 h-3" /> Lihat di Peta
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-yellow-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> GPS tidak aktif — data disimpan tanpa koordinat.
+                  </p>
+                )}
+              </div>
+
+              {errorMsg && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
+                  <XCircle className="w-4 h-4 shrink-0" /> {errorMsg}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => { setShowReview(false); setErrorMsg(''); }}
+                disabled={saving}
+                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <ArrowLeft className="w-4 h-4" /> Edit Kembali
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={saving}
+                className="flex-1 py-3 bg-tenant-primary hover:bg-tenant-primary/90 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-tenant-primary/20"
+              >
+                {saving ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
+                ) : (
+                  <><CheckCircle2 className="w-4 h-4" /> Konfirmasi & Kirim Data</>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

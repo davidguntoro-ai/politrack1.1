@@ -106,6 +106,8 @@ class Voter(Base):
     phone = Column(String, nullable=True)
     pekerjaan = Column(String, nullable=True)
     status = Column(String, default="Unvisited")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     tenant_id = Column(String, index=True)
 
