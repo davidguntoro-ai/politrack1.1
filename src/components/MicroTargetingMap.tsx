@@ -62,15 +62,26 @@ export const MicroTargetingMap: React.FC = () => {
       const token = localStorage.getItem('token');
       const res = await fetch('/api/analytics/map-data', {
         headers: {
-          'x-tenant-id': 'tenant_1', // Mock
+          'x-tenant-id': 'tenant_1',
           'Authorization': `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setData(null);
+        setLoading(false);
+        return;
+      }
       const json = await res.json();
-      setData(json);
+      // Only accept valid GeoJSON FeatureCollections
+      if (json && Array.isArray(json.features)) {
+        setData(json);
+      } else {
+        setData(null);
+      }
       setLoading(false);
     } catch (err) {
       console.error('Failed to fetch map data:', err);
+      setData(null);
       setLoading(false);
     }
   };
@@ -183,6 +194,29 @@ export const MicroTargetingMap: React.FC = () => {
       console.error('Dispatch failed:', err);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[600px] bg-zinc-950 rounded-2xl border border-zinc-800 items-center justify-center">
+        <div className="text-center text-zinc-500">
+          <Target className="w-10 h-10 mx-auto mb-3 animate-pulse" />
+          <p className="text-sm font-medium">Loading map data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex h-[600px] bg-zinc-950 rounded-2xl border border-zinc-800 items-center justify-center">
+        <div className="text-center text-zinc-500">
+          <AlertCircle className="w-10 h-10 mx-auto mb-3 text-yellow-500/60" />
+          <p className="text-sm font-medium text-zinc-400">Peta tidak tersedia</p>
+          <p className="text-xs text-zinc-600 mt-1">Data wilayah belum dimuat atau sesi belum aktif.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[600px] bg-zinc-950 rounded-2xl border border-zinc-800 overflow-hidden relative">
