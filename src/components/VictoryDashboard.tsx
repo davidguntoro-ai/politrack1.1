@@ -74,17 +74,23 @@ export const VictoryDashboard: React.FC<VictoryDashboardProps> = ({ userRole }) 
           headers: { 'x-tenant-id': 'tenant_1', 'Authorization': `Bearer ${token}` }
         })
       ]);
-      
-      const statsData = await statsRes.json();
-      const incidentsData = await incidentsRes.json();
-      const heatmap = await heatmapRes.json();
-      
-      setStats({ ...statsData, incidents: incidentsData });
-      setHeatmapData(heatmap);
+
+      // Only parse valid responses
+      const statsData = statsRes.ok ? await statsRes.json() : {};
+      const incidentsRaw = incidentsRes.ok ? await incidentsRes.json() : [];
+      const incidentsData = Array.isArray(incidentsRaw) ? incidentsRaw : [];
+      const heatmap = heatmapRes.ok ? await heatmapRes.json() : null;
+
+      // Only update state when core stats has the expected shape
+      if (statsData && typeof statsData.totalVotesCandidate === 'number') {
+        setStats({ ...statsData, incidents: incidentsData });
+        setHeatmapData(heatmap);
+        setLastUpdate(new Date());
+      }
       setLoading(false);
-      setLastUpdate(new Date());
     } catch (err) {
       console.error('Failed to fetch War Room stats:', err);
+      setLoading(false);
     }
   };
 
@@ -137,7 +143,7 @@ export const VictoryDashboard: React.FC<VictoryDashboardProps> = ({ userRole }) 
     );
   }
 
-  const velocityData = Object.entries(stats.velocity).map(([hour, count]) => ({
+  const velocityData = Object.entries(stats.velocity ?? {}).map(([hour, count]) => ({
     hour: `${hour}:00`,
     count
   })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour));

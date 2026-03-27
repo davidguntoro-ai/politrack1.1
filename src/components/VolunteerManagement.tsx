@@ -35,6 +35,10 @@ const Sparkline: React.FC<{ data: number[] }> = ({ data }) => {
   const max = Math.max(...data, 1);
   const width = 80;
   const height = 20;
+  // Guard: need at least 2 points to draw a line
+  if (!data || data.length < 2) {
+    return <svg width={width} height={height} />;
+  }
   const points = data.map((val, i) => {
     const x = (i / (data.length - 1)) * width;
     const y = height - (val / max) * height;
