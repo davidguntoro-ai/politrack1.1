@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Voter Sentiment Survey",
+  "description": "Schema for saving voter interaction and sentiment survey to core.activities table",
+  "type": "object",
+  "properties": {
+    "voter_id": {
+      "type": "string",
+      "description": "Unique identifier for the voter"
+    },
+    "voter_name": {
+      "type": "string"
+    },
+    "voter_nik": {
+      "type": "string",
+      "pattern": "^[0-9]{16}$"
+    },
+    "support_status": {
+      "type": "string",
+      "enum": ["HIJAU", "KUNING", "MERAH"],
+      "description": "HIJAU: Pendukung, KUNING: Swing Voter, MERAH: Lawan"
+    },
+    "awareness": {
+      "type": "string",
+      "enum": ["Sudah Kenal", "Pernah Dengar", "Tidak Kenal"]
+    },
+    "program_support_rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Star rating for candidate programs"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["Infrastruktur", "Ekonomi", "Kesehatan", "Pendidikan"]
+      }
+    },
+    "swing_voter_reason": {
+      "type": "string",
+      "enum": ["Belum kenal", "Janji belum bukti", "Pilih calon lain"],
+      "description": "Conditional field if support_status is KUNING"
+    },
+    "note": {
+      "type": "string",
+      "description": "Volunteer special notes"
+    },
+    "photo_base64": {
+      "type": "string",
+      "description": "Watermarked photo in base64 format"
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "accuracy": { "type": "number" }
+      },
+      "required": ["latitude", "longitude"]
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix timestamp of the interaction"
+    },
+    "is_mock_location": {
+      "type": "boolean"
+    }
+  },
+  "required": ["voter_id", "support_status", "awareness", "location", "timestamp"]
+}

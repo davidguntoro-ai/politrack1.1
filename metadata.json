@@ -1,0 +1,5 @@
+{
+  "name": "PoliTrack AI",
+  "description": "Cloud-Native Multi-tenant Political Analytics Platform with AI Sentiment Analysis and Row-Level Security.",
+  "requestFramePermissions": []
+}

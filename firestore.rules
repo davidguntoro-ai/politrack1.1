@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isTenantMember(tenantId) {
+      let user = getUserData();
+      return isAuthenticated() && user.tenantId == tenantId;
+    }
+    
+    function isNotLocked() {
+      let user = getUserData();
+      return !('isLocked' in user) || user.isLocked == false;
+    }
+
+    function isTenantNotLocked(tenantId) {
+      let tenant = get(/databases/$(database)/documents/tenants/$(tenantId)).data;
+      return !('emergencyLockdown' in tenant) || tenant.emergencyLockdown == false;
+    }
+
+    function isSuperAdmin() {
+      let user = getUserData();
+      return isAuthenticated() && (
+        user.role == 'SUPER_ADMIN' || 
+        (request.auth.token.email == "davidguntoro65@guru.smk.belajar.id" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isKoorcam() {
+      return isAuthenticated() && getUserData().role == 'ADMIN_KECAMATAN';
+    }
+
+    function isKoordes() {
+      return isAuthenticated() && getUserData().role == 'ADMIN_DESA';
+    }
+
+    function isDataEntry() {
+      return isAuthenticated() && getUserData().role == 'DATA_ENTRY';
+    }
+
+    function isRelawan() {
+      return isAuthenticated() && getUserData().role == 'RELAWAN';
+    }
+
+    // Tenants: Only admins can create/delete. Members can read.
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId) || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // Voters: RLS based on tenantId and geographical scope
+    match /voters/{voterId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (isNotLocked() && isTenantNotLocked(resource.data.tenantId) && resource.data.tenantId == getUserData().tenantId && (
+          (isKoorcam() && resource.data.districtCode == getUserData().assignedDistrictCode) ||
+          (isKoordes() && resource.data.villageCode == getUserData().assignedVillageCode) ||
+          (isRelawan() && (!getUserData().isRestricted || resource.data.villageClade == getUserData().assignedVillage)) ||
+          (isDataEntry())
+        ))
+      );
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (isNotLocked() && isTenantNotLocked(request.resource.data.tenantId) && (
+          isDataEntry() ||
+          (request.resource.data.tenantId == getUserData().tenantId)
+        ))
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isNotLocked() && isTenantNotLocked(resource.data.tenantId) && resource.data.tenantId == getUserData().tenantId && (
+          (isKoorcam() && resource.data.districtCode == getUserData().assignedDistrictCode) ||
+          (isKoordes() && resource.data.villageCode == getUserData().assignedVillageCode) ||
+          (isRelawan() && (!getUserData().isRestricted || resource.data.villageClade == getUserData().assignedVillage))
+        ))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Activity: Geo-fencing audit
+    match /activities/{activityId} {
+      allow read: if isAuthenticated() && (resource.data.tenantId == getUserData().tenantId);
+      allow create: if isAuthenticated() && (request.resource.data.tenantId == getUserData().tenantId);
+    }
+
+    // Users: Hierarchy logic
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isSuperAdmin() ||
+        (isKoorcam() && resource.data.assignedDistrictCode == getUserData().assignedDistrictCode) // Koorcam sees their district users
+      );
+      allow write: if isSuperAdmin();
+    }
+
+    // Incidents: WORM (Write-Once-Read-Many) for legal integrity
+    match /incidents/{incidentId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isSuperAdmin();
+      allow create: if isAuthenticated() && (request.resource.data.tenantId == getUserData().tenantId);
+      allow update: if (isSuperAdmin() || isKoorcam()) && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // TPS Results: Real-time count data
+    match /tps_results/{tpsId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isSuperAdmin();
+      allow create: if isAuthenticated() && (request.resource.data.tenantId == getUserData().tenantId);
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+  }
+}

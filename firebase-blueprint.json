@@ -1,0 +1,185 @@
+{
+  "entities": {
+    "Tenant": {
+      "title": "Political Tenant",
+      "description": "Isolates data between different political candidates.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "candidateName": { "type": "string" },
+        "region": { "type": "string" },
+        "emergencyLockdown": { "type": "boolean", "description": "Global kill switch for the entire tenant." },
+        "isSummaryEnabled": { "type": "boolean", "description": "Enable daily WhatsApp executive summary" },
+        "summaryRecipientPhone": { "type": "string", "description": "WhatsApp number for executive summary" },
+        "tpsPin": { "type": "string", "description": "Master PIN for War Room access" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "candidateName"]
+    },
+    "tps_results": {
+      "title": "TPS Real Count Results",
+      "description": "Real-time vote counts from individual polling stations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "district": { "type": "string" },
+        "village": { "type": "string" },
+        "tpsNumber": { "type": "string" },
+        "votesCandidate": { "type": "number" },
+        "votesOthers": { "type": "number" },
+        "totalVoters": { "type": "number" },
+        "reportedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tenantId", "district", "tpsNumber", "votesCandidate"]
+    },
+    "Incident": {
+      "title": "Legal Incident Report",
+      "description": "Emergency reports from witnesses regarding electoral violations or incidents.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "category": { "type": "string", "enum": ["VOTER_INTIMIDATION", "BALLOT_TAMPERING", "MONEY_POLITICS", "VIOLENCE", "OTHER"] },
+        "description": { "type": "string" },
+        "evidenceUrl": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" }
+          }
+        },
+        "reportedBy": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "status": { "type": "string", "enum": ["NEW", "UNDER_INVESTIGATION", "RESOLVED", "LEGAL_ACTION_TAKEN"] },
+        "digitalSignature": { "type": "string", "description": "Cryptographic hash for tamper-evidence." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tenantId", "category", "description", "reportedBy", "digitalSignature"]
+    },
+    "Voter": {
+      "title": "Voter Record",
+      "description": "Individual voter data with AI-analyzed sentiment and area clade.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "comment": { "type": "string" },
+        "nik_encrypted": { "type": "string", "description": "Hashed NIK for privacy and duplicate detection" },
+        "districtCode": { "type": "string" },
+        "villageCode": { "type": "string" },
+        "villageClade": { "type": "string", "description": "Geographic area for assignment filtering" },
+        "sentiment": { "type": "string", "enum": ["positive", "negative", "neutral", "pending"] },
+        "sentimentScore": { "type": "number" },
+        "supportStatusPrediction": { "type": "string" },
+        "assigned_to_user_id": { "type": "string", "description": "ID of the Relawan who registered the voter" },
+        "phone_number": { "type": "string" },
+        "isHighInfluence": { "type": "boolean", "description": "Flag for high-influence figures" },
+        "mainIssue": { "type": "string", "description": "Core issue of concern (e.g., Infrastructure)" },
+        "competitorActivity": { "type": "number", "description": "Intensity of competitor activity (0-1)" },
+        "gpsAccuracy": { "type": "number", "description": "GPS accuracy in meters" },
+        "exifTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp from photo EXIF metadata" },
+        "ipAddress": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "tenantId", "name", "comment", "nik_encrypted", "districtCode", "villageCode"]
+    },
+    "User": {
+      "title": "Platform User",
+      "description": "User profile with tenant association, hierarchy, and area assignment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "role": { 
+          "type": "string", 
+          "enum": ["SUPER_ADMIN", "ADMIN_KECAMATAN", "ADMIN_DESA", "DATA_ENTRY", "RELAWAN"] 
+        },
+        "nama_lengkap": { "type": "string" },
+        "nik_encrypted": { "type": "string", "description": "Encrypted/Hashed NIK for privacy" },
+        "no_telp": { "type": "string" },
+        "jenis_kelamin": { "type": "string", "enum": ["L", "P"] },
+        "agama": { "type": "string" },
+        "pekerjaan": { "type": "string" },
+        "alamat": { "type": "string" },
+        "deskripsi_pribadi": { "type": "string" },
+        "ktp_url": { "type": "string" },
+        "foto_profil_url": { "type": "string" },
+        "kode_relawan": { "type": "string", "description": "Unique referral code" },
+        "is_active": { "type": "boolean", "description": "Status of the volunteer" },
+        "tenantId": { "type": "string" },
+        "tgl_lahir": { "type": "string", "format": "date" },
+        "koordinat_rumah": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "pekerjaan": { "type": "string" },
+        "ukuran_baju": { "type": "string", "enum": ["S", "M", "L", "XL", "XXL"] },
+        "tps_target": { "type": "string" },
+        "sosmed_links": { "type": "object" },
+        "organisasi": { "type": "string" },
+        "accessScope": {
+          "type": "string",
+          "enum": ["DAPIL", "KECAMATAN", "DESA"],
+          "description": "Geographical level of access."
+        },
+        "assignedDistrictCode": { "type": "string", "description": "District code for ADMIN_KECAMATAN." },
+        "assignedVillageCode": { "type": "string", "description": "Village code for ADMIN_DESA." },
+        "email": { "type": "string" },
+        "assignedVillage": { "type": "string" },
+        "isRestricted": { "type": "boolean" },
+        "parentId": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "isDeviceLocked": { "type": "boolean" },
+        "isLocked": { "type": "boolean", "description": "Account kill switch." },
+        "lockedAt": { "type": "string", "format": "date-time" },
+        "reliabilityScore": { "type": "number", "description": "Automated quality score (0-100)" },
+        "isFlagged": { "type": "boolean", "description": "Flagged for manual audit" },
+        "auditStatus": { "type": "string", "enum": ["clean", "suspicious", "fraudulent"] }
+      },
+      "required": ["id", "tenantId", "role", "nama_lengkap", "nik_encrypted", "no_telp", "jenis_kelamin", "agama", "pekerjaan", "alamat", "deskripsi_pribadi", "ktp_url", "foto_profil_url"]
+    },
+    "Activity": {
+      "title": "Relawan Activity",
+      "description": "Activity reports with geo-fencing audit flags.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "description": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "outOfAssignment": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "tenantId", "description"]
+    }
+  },
+  "firestore": {
+    "/tenants/{tenantId}": {
+      "schema": "Tenant",
+      "description": "Root tenant configuration."
+    },
+    "/voters/{voterId}": {
+      "schema": "Voter",
+      "description": "Global voter collection with tenant-based RLS."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User metadata and tenant mapping."
+    }
+  }
+}
