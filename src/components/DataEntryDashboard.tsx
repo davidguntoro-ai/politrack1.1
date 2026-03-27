@@ -21,8 +21,8 @@ import {
   CreditCard
 } from 'lucide-react';
 import axios from 'axios';
-import { PROFESSIONS } from '../types';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ProfessionSelect } from './ProfessionSelect';
 
 export const BulkUploadComponent: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -289,10 +289,12 @@ export const VoterInputForm: React.FC = () => {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3" /> Pekerjaan</label>
-          <select value={fields.pekerjaan} onChange={set('pekerjaan')} className={INPUT_CLS}>
-            <option value="">Pilih Pekerjaan</option>
-            {PROFESSIONS.map(job => <option key={job} value={job}>{job}</option>)}
-          </select>
+          <ProfessionSelect
+            value={fields.pekerjaan}
+            onChange={v => setFields(p => ({ ...p, pekerjaan: v }))}
+            selectClassName={INPUT_CLS}
+            inputClassName={INPUT_CLS + ' mt-2'}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><MapPin className="w-3 h-3" /> Kecamatan</label>

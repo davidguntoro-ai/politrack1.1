@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Send, User, Star, MessageSquare, Tag, MapPin, CheckCircle, Camera,
-  Loader2, AlertTriangle, Eye, ArrowLeft, Navigation
+  Loader2, AlertTriangle, Eye, ArrowLeft, Navigation, Briefcase
 } from 'lucide-react';
+import { ProfessionSelect } from './ProfessionSelect';
 
 interface SurveyModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
     voter_nik: '',
     voter_phone: '',
     volunteer_name: '',
+    pekerjaan: '',
     loyalty_score: 5,
     sentiment_score: 5,
     voter_status: 'Undecided',
@@ -109,6 +111,7 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
           voter_name: formData.voter_name,
           voter_nik: formData.voter_nik || undefined,
           volunteer_name: formData.volunteer_name,
+          pekerjaan: formData.pekerjaan || undefined,
           loyalty_score: formData.loyalty_score,
           sentiment_score: formData.sentiment_score,
           voter_status: formData.voter_status,
@@ -131,6 +134,7 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
             voter_nik: '',
             voter_phone: '',
             volunteer_name: '',
+            pekerjaan: '',
             loyalty_score: 5,
             sentiment_score: 5,
             voter_status: 'Undecided',
@@ -214,6 +218,14 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
 
                   <div className="bg-zinc-950 rounded-2xl p-5 border border-zinc-800 space-y-3">
                     <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Data Survei</p>
+                    {formData.pekerjaan && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-zinc-500">Pekerjaan</span>
+                        <span className="text-sm font-bold flex items-center gap-1">
+                          <Briefcase className="w-3 h-3 text-tenant-primary" />{formData.pekerjaan}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-zinc-500">Isu Prioritas</span>
                       <span className="text-sm font-bold flex items-center gap-1">
@@ -354,6 +366,18 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({ isOpen, onClose, tenan
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-sm outline-none focus:border-tenant-primary transition-colors"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" /> Pekerjaan Pemilih
+                    </label>
+                    <ProfessionSelect
+                      value={formData.pekerjaan}
+                      onChange={v => setFormData(p => ({ ...p, pekerjaan: v }))}
+                      selectClassName="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-4 text-sm outline-none focus:border-tenant-primary transition-colors appearance-none"
+                      inputClassName="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-4 text-sm outline-none focus:border-tenant-primary transition-colors"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './Toast';
 import { api } from '../services/api';
+import { ProfessionSelect } from './ProfessionSelect';
 
 interface SidebarProps {
   user: User;
@@ -379,12 +380,11 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Pekerjaan</label>
-                    <input
-                      type="text"
+                    <ProfessionSelect
                       value={form.pekerjaan}
-                      onChange={e => setForm({ ...form, pekerjaan: e.target.value })}
-                      placeholder="Jabatan / Pekerjaan"
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white"
+                      onChange={v => setForm({ ...form, pekerjaan: v })}
+                      selectClassName="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white appearance-none"
+                      inputClassName="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white mt-2"
                     />
                   </div>
                 </div>

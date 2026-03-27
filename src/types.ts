@@ -6,13 +6,30 @@ export enum UserRole {
 }
 
 export const PROFESSIONS = [
-  "Petani", "Nelayan", "Pedagang", "Buruh", "IRT", 
-  "Mahasiswa", "Wiraswasta", "Guru Swasta", "ASN", "TNI", "POLRI"
+  "Aparatur Negara (ASN/TNI/Polri)",
+  "Pegawai BUMN/BUMD",
+  "Karyawan Swasta",
+  "Tenaga Pendidik (Guru/Dosen)",
+  "Tenaga Kesehatan",
+  "Wiraswasta",
+  "Pedagang",
+  "Petani & Pekebun",
+  "Nelayan & Maritim",
+  "Peternak",
+  "Pekerja Informal/Jasa",
+  "Profesional & Kreatif",
+  "Akademisi & Pelajar",
+  "Ibu Rumah Tangga",
+  "Purnawirawan/Pensiunan",
+  "Belum Bekerja",
+  "Profesi Lainnya",
 ] as const;
+
+export const OTHER_PROFESSION = "Profesi Lainnya" as const;
 
 export type Profession = typeof PROFESSIONS[number];
 
-export const NEUTRAL_PROFESSIONS: Profession[] = ["ASN", "TNI", "POLRI"];
+export const NEUTRAL_PROFESSIONS: string[] = ["Aparatur Negara (ASN/TNI/Polri)", "Purnawirawan/Pensiunan"];
 
 export interface Tenant {
   id: string;
