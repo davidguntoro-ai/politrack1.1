@@ -14,9 +14,17 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.replace('/');
+      const data = err.response?.data || {};
+      const msg: string = (data.error || data.message || '').toLowerCase();
+      const isExpired =
+        msg.includes('expired') ||
+        msg.includes('token expired') ||
+        data.code === 'TOKEN_EXPIRED';
+      if (isExpired) {
+        localStorage.removeItem('politrack_token');
+        localStorage.removeItem('politrack_user');
+        window.location.replace('/');
+      }
     }
     return Promise.reject(err);
   }

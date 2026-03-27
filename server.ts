@@ -561,6 +561,48 @@ async function startServer() {
     }
   });
 
+  // 5b. Survey Data Entry — POST /api/survey
+  app.post("/api/survey", async (req, res) => {
+    const tenantId = (req as any).tenantId || req.headers["x-tenant-id"] as string || "tenant_1";
+    const uid      = (req as any).uid || "anonymous";
+    const {
+      voter_name, voter_nik, voter_phone, volunteer_name, pekerjaan,
+      loyalty_score, sentiment_score, voter_status, issue_tag, photo_url,
+      latitude, longitude
+    } = req.body;
+
+    if (!voter_name) {
+      return res.status(400).json({ detail: "voter_name is required" });
+    }
+
+    try {
+      const surveyData: Record<string, any> = {
+        tenantId,
+        submittedBy: uid,
+        voter_name,
+        voter_nik:        voter_nik        || null,
+        voter_phone:      voter_phone      || null,
+        volunteer_name:   volunteer_name   || null,
+        pekerjaan:        pekerjaan        || null,
+        loyalty_score:    Number(loyalty_score)    || 5,
+        sentiment_score:  Number(sentiment_score)  || 5,
+        voter_status:     voter_status     || "Undecided",
+        issue_tag:        issue_tag        || "General",
+        photo_url:        photo_url        || null,
+        latitude:         latitude         ?? null,
+        longitude:        longitude        ?? null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const docRef = await db.collection("surveys").add(surveyData);
+      console.log(`[SURVEY] New survey saved: ${docRef.id} by ${uid} for tenant ${tenantId}`);
+      res.json({ id: docRef.id, status: "ok" });
+    } catch (error) {
+      console.error("Survey save error:", error);
+      res.status(500).json({ detail: "Failed to save survey" });
+    }
+  });
+
   // 6. Volunteer (Relawan) Profile Management
   // GET /api/volunteers: Fetch all volunteers for the current tenant.
   app.get("/api/volunteers", tenantIsolationMiddleware, async (req, res) => {
