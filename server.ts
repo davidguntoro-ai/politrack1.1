@@ -6,6 +6,9 @@ import { GoogleGenAI } from "@google/genai";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json" with { type: "json" };
+import pg from "pg";
+import bcryptjs from "bcryptjs";
+const { Pool } = pg;
 
 // Initialize Firebase Admin for background tasks
 if (!admin.apps.length) {
@@ -26,6 +29,8 @@ import { createServer } from "http";
 const db = getFirestore(undefined, firebaseConfig.firestoreDatabaseId || "(default)");
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "" });
 const JWT_SECRET = process.env.JWT_SECRET || "politrack-super-secret-key";
+
+const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Helper for NIK hashing
 const hashNIK = (nik: string) => {
@@ -295,6 +300,46 @@ async function startServer() {
     }
   });
   // --- End Analytics Endpoints ---
+
+  // Local Auth: Phone + Password login against PostgreSQL users table
+  app.post("/api/auth/login-local", async (req, res) => {
+    const { phone, password } = req.body;
+    if (!phone || !password) {
+      return res.status(400).json({ error: "Phone and password are required" });
+    }
+    try {
+      const result = await pgPool.query(
+        "SELECT * FROM users WHERE phone = $1 AND status = 'Active' LIMIT 1",
+        [phone]
+      );
+      const user = result.rows[0];
+      if (!user) {
+        return res.status(401).json({ error: "Invalid phone number or password" });
+      }
+      const passwordMatch = await bcryptjs.compare(password, user.password_hash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid phone number or password" });
+      }
+      const token = jwt.sign(
+        { uid: String(user.id), tenantId: user.tenant_id, role: user.role, phone: user.phone },
+        JWT_SECRET,
+        { expiresIn: "24h" }
+      );
+      return res.json({
+        token,
+        user: {
+          id: String(user.id),
+          phone: user.phone,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenant_id,
+        },
+      });
+    } catch (err) {
+      console.error("Local login error:", err);
+      return res.status(500).json({ error: "Authentication service unavailable" });
+    }
+  });
 
   app.use(tenantIsolationMiddleware);
 

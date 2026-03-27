@@ -3,8 +3,9 @@ import { DashboardLayout } from './components/DashboardLayout';
 import { VoterInteractionModule } from './components/VoterInteractionModule';
 import { PublicMicrosite } from './components/PublicMicrosite';
 import { ToastProvider } from './components/Toast';
+import { LoginPage } from './components/LoginPage';
 import { User, UserRole, Tenant } from './types';
-import { Settings2, LogIn, Smartphone, LayoutDashboard, Globe } from 'lucide-react';
+import { Settings2, Smartphone, LayoutDashboard, Globe } from 'lucide-react';
 
 const MOCK_TENANT: Tenant = {
   id: 'tenant_1',
@@ -15,81 +16,89 @@ const MOCK_TENANT: Tenant = {
   logo_url: 'https://picsum.photos/seed/politrack/200/200',
 };
 
-const MOCK_USERS: Record<UserRole, User> = {
-  [UserRole.KANDIDAT]: {
-    id: 'usr_001',
-    email: 'kandidat@politrack.id',
-    role: UserRole.KANDIDAT,
-    tenantId: 'tenant_1',
-    nama_lengkap: 'Dr. H. Ahmad Fauzi, M.Si',
-  },
-  [UserRole.KOORCAM]: {
-    id: 'usr_002',
-    email: 'koorcam@politrack.id',
-    role: UserRole.KOORCAM,
-    tenantId: 'tenant_1',
-    nama_lengkap: 'Koordinator Kecamatan',
-  },
-  [UserRole.DATA_ENTRY]: {
-    id: 'usr_003',
-    email: 'dataentry@politrack.id',
-    role: UserRole.DATA_ENTRY,
-    tenantId: 'tenant_1',
-    nama_lengkap: 'Operator Data Entry',
-  },
-  [UserRole.RELAWAN]: {
-    id: 'usr_004',
-    email: 'relawan@politrack.id',
-    role: UserRole.RELAWAN,
-    tenantId: 'tenant_1',
-    nama_lengkap: 'Relawan Lapangan',
-  },
+const ROLE_MAP: Record<string, UserRole> = {
+  Admin: UserRole.KANDIDAT,
+  KANDIDAT: UserRole.KANDIDAT,
+  KOORCAM: UserRole.KOORCAM,
+  DATA_ENTRY: UserRole.DATA_ENTRY,
+  RELAWAN: UserRole.RELAWAN,
 };
 
+function buildUserFromSession(raw: any): User {
+  return {
+    id: raw.id || 'usr_001',
+    email: raw.phone ? `${raw.phone}@politrack.id` : 'admin@politrack.id',
+    role: ROLE_MAP[raw.role] || UserRole.KANDIDAT,
+    tenantId: raw.tenantId || 'tenant_1',
+    nama_lengkap: raw.name || 'Administrator',
+  };
+}
+
+function getStoredAuth(): { token: string; user: User } | null {
+  try {
+    const token = localStorage.getItem('politrack_token');
+    const rawUser = localStorage.getItem('politrack_user');
+    if (!token || !rawUser) return null;
+    return { token, user: buildUserFromSession(JSON.parse(rawUser)) };
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.KANDIDAT);
-  const [user, setUser] = useState<User>(MOCK_USERS[UserRole.KANDIDAT]);
+  const stored = getStoredAuth();
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!stored);
+  const [user, setUser] = useState<User>(stored?.user ?? buildUserFromSession({}));
   const [tenant, setTenant] = useState<Tenant>(MOCK_TENANT);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [currentRole, setCurrentRole] = useState<UserRole>(stored?.user?.role ?? UserRole.KANDIDAT);
   const [isMobileMode, setIsMobileMode] = useState(false);
   const [isPublicMicrosite, setIsPublicMicrosite] = useState(false);
 
   useEffect(() => {
-    setUser(MOCK_USERS[currentRole]);
     document.documentElement.style.setProperty('--tenant-primary', tenant.primary_color);
-  }, [currentRole, tenant.primary_color]);
+  }, [tenant.primary_color]);
+
+  useEffect(() => {
+    setUser(prev => ({ ...prev, role: currentRole }));
+  }, [currentRole]);
+
+  const handleLoginSuccess = (_token: string, rawUser: any) => {
+    const mappedUser = buildUserFromSession(rawUser);
+    setUser(mappedUser);
+    setCurrentRole(mappedUser.role);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    window.location.replace(window.location.origin);
+  };
 
   const handleUpdateTenant = (updatedTenant: Partial<Tenant>) => {
     setTenant(prev => ({ ...prev, ...updatedTenant }));
   };
 
   const handleUpdateUser = (patch: Partial<User>) => {
-    setUser(prev => ({ ...prev, ...patch }));
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    setIsLoggedIn(false);
+    setUser(prev => {
+      const updated = { ...prev, ...patch };
+      localStorage.setItem('politrack_user', JSON.stringify({
+        id: updated.id,
+        phone: updated.email?.split('@')[0],
+        name: updated.nama_lengkap,
+        role: updated.role,
+        tenantId: updated.tenantId,
+      }));
+      return updated;
+    });
   };
 
   if (!isLoggedIn) {
     return (
       <ToastProvider>
-        <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-              PoliTrack <span className="text-yellow-500">AI</span>
-            </h1>
-            <p className="text-zinc-500 mb-8 uppercase text-xs font-bold tracking-widest">Intelligence for Victory</p>
-            <button
-              onClick={() => setIsLoggedIn(true)}
-              className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2"
-            >
-              <LogIn className="w-5 h-5" /> Masuk ke Dashboard
-            </button>
-          </div>
-        </div>
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
       </ToastProvider>
     );
   }
@@ -97,7 +106,6 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="relative">
-        {/* View Switcher for Demo Purposes */}
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
           <button
             onClick={() => {
