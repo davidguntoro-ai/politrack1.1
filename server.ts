@@ -1390,7 +1390,7 @@ _PoliTrack AI - Strategic Intelligence System_`;
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        allowedHosts: "all",
+        allowedHosts: true,
         host: "0.0.0.0",
       },
       appType: "spa",
