@@ -62,7 +62,7 @@ export const VictoryDashboard: React.FC<VictoryDashboardProps> = ({ userRole }) 
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const [statsRes, incidentsRes, heatmapRes] = await Promise.all([
         fetch('/api/war-room/stats', {
           headers: { 'x-tenant-id': 'tenant_1', 'Authorization': `Bearer ${token}` }
@@ -96,7 +96,7 @@ export const VictoryDashboard: React.FC<VictoryDashboardProps> = ({ userRole }) 
 
   const updateIncidentStatus = async (id: string, status: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       await fetch(`/api/incidents/${id}/status`, {
         method: 'PATCH',
         headers: {

@@ -19,7 +19,7 @@ export const VictoryDashboardAuth: React.FC<VictoryDashboardAuthProps> = ({ onAu
     setError(false);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/war-room/verify-pin', {
         method: 'POST',
         headers: {

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AlertTriangle, MapPin, Users, Send, CheckCircle, Activity, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertTriangle, MapPin, Users, Send, CheckCircle, Activity, ShieldAlert, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IncidentReportModal } from './IncidentReportModal';
 import { SurveyModal } from './SurveyModal';
@@ -8,9 +8,40 @@ interface RelawanDashboardProps {
   tenantId: string;
 }
 
+interface RelawanStats {
+  votersRegistered: number;
+  surveysSubmitted: number;
+  reliabilityScore: number;
+}
+
 export const RelawanDashboard: React.FC<RelawanDashboardProps> = ({ tenantId }) => {
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
+  const [stats, setStats] = useState<RelawanStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('politrack_token');
+        const res = await fetch('/api/relawan/my-stats', {
+          headers: {
+            'x-tenant-id': tenantId,
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch relawan stats:', err);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchStats();
+  }, [tenantId]);
 
   return (
     <div className="space-y-8">
@@ -77,8 +108,12 @@ export const RelawanDashboard: React.FC<RelawanDashboardProps> = ({ tenantId }) 
             <Users className="w-6 h-6 text-tenant-primary" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Voters Visited</p>
-            <p className="text-2xl font-black">124</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pemilih Didaftar</p>
+            {statsLoading ? (
+              <Loader2 className="w-5 h-5 text-zinc-500 animate-spin mt-1" />
+            ) : (
+              <p className="text-2xl font-black">{stats?.votersRegistered ?? 0}</p>
+            )}
           </div>
         </div>
 
@@ -87,8 +122,12 @@ export const RelawanDashboard: React.FC<RelawanDashboardProps> = ({ tenantId }) 
             <CheckCircle className="w-6 h-6 text-green-500" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reports Verified</p>
-            <p className="text-2xl font-black">18</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Survei Dikirim</p>
+            {statsLoading ? (
+              <Loader2 className="w-5 h-5 text-zinc-500 animate-spin mt-1" />
+            ) : (
+              <p className="text-2xl font-black">{stats?.surveysSubmitted ?? 0}</p>
+            )}
           </div>
         </div>
 
@@ -97,8 +136,12 @@ export const RelawanDashboard: React.FC<RelawanDashboardProps> = ({ tenantId }) 
             <Activity className="w-6 h-6 text-blue-500" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reliability Score</p>
-            <p className="text-2xl font-black">98%</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Skor Keandalan</p>
+            {statsLoading ? (
+              <Loader2 className="w-5 h-5 text-zinc-500 animate-spin mt-1" />
+            ) : (
+              <p className="text-2xl font-black">{stats?.reliabilityScore ?? 100}%</p>
+            )}
           </div>
         </div>
       </div>

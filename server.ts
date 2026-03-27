@@ -678,6 +678,28 @@ async function startServer() {
     }
   });
 
+  // GET /api/relawan/my-stats: Returns live voter & survey counts for the logged-in relawan.
+  app.get("/api/relawan/my-stats", async (req, res) => {
+    const uid = (req as any).uid;
+    const tenantId = (req as any).tenantId;
+    try {
+      const [votersSnap, surveysSnap, userDoc] = await Promise.all([
+        db.collection("voters").where("tenantId", "==", tenantId).where("assigned_to_user_id", "==", uid).get(),
+        db.collection("surveys").where("tenantId", "==", tenantId).where("submittedBy", "==", uid).get(),
+        db.collection("users").doc(uid).get(),
+      ]);
+      const reliabilityScore = userDoc.exists ? (userDoc.data()?.reliabilityScore ?? 100) : 100;
+      res.json({
+        votersRegistered: votersSnap.size,
+        surveysSubmitted: surveysSnap.size,
+        reliabilityScore,
+      });
+    } catch (err) {
+      console.error("Relawan my-stats error:", err);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
   // PATCH /api/validate-relawan/:nik: Only accessible by Admin/Kandidat.
   // Toggles is_active to true and triggers generation of unique kode_relawan.
   app.patch("/api/validate-relawan/:nik", async (req, res) => {

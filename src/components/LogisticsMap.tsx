@@ -40,7 +40,7 @@ export const LogisticsMap: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('politrack_token');
     const headers = {
       'x-tenant-id': 'tenant_1',
       'Authorization': `Bearer ${token}`

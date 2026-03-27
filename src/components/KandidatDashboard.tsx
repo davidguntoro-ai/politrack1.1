@@ -11,7 +11,7 @@ export const VPIEngineComponent: React.FC = () => {
 
   const fetchVpi = React.useCallback((job: string = '') => {
     setLoading(true);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('politrack_token');
     const url = new URL('/api/analytics/vpi', window.location.origin);
     if (job) url.searchParams.append('pekerjaan', job);
 
@@ -150,7 +150,7 @@ export const WhatsAppSettings: React.FC<{ tenant: Tenant; onUpdate: (t: Partial<
   const triggerPreview = async () => {
     setGenerating(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/admin/generate-summary', {
         method: 'POST',
         headers: {

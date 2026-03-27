@@ -28,7 +28,7 @@ export const VolunteerAuditDashboard: React.FC = () => {
 
   const fetchAuditResults = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/admin/audit-results', {
         headers: {
           'x-tenant-id': 'tenant_1', // Mock
@@ -51,7 +51,7 @@ export const VolunteerAuditDashboard: React.FC = () => {
   const handleTriggerAudit = async () => {
     setTriggering(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       await fetch('/api/admin/trigger-audit', {
         method: 'POST',
         headers: {

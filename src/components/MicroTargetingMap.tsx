@@ -59,7 +59,7 @@ export const MicroTargetingMap: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/analytics/map-data', {
         headers: {
           'x-tenant-id': 'tenant_1',
@@ -173,7 +173,7 @@ export const MicroTargetingMap: React.FC = () => {
 
   const handleDispatch = async (voterId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/admin/dispatch', {
         method: 'POST',
         headers: {

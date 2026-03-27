@@ -38,7 +38,7 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({ isOpen
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('politrack_token');
       const res = await fetch('/api/incidents/report', {
         method: 'POST',
         headers: {
