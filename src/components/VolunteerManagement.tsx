@@ -405,10 +405,17 @@ export const VolunteerManagement: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Agama</label>
-                    <input required type="text" value={newVolunteer.agama}
+                    <select required value={newVolunteer.agama}
                       onChange={e => setNewVolunteer({ ...newVolunteer, agama: e.target.value })}
-                      placeholder="Agama"
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white" />
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white appearance-none">
+                      <option value="">-- Pilih Agama --</option>
+                      <option value="Islam">Islam</option>
+                      <option value="Kristen Protestan">Kristen Protestan</option>
+                      <option value="Katolik">Katolik</option>
+                      <option value="Hindu">Hindu</option>
+                      <option value="Buddha">Buddha</option>
+                      <option value="Konghucu">Konghucu</option>
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-2">

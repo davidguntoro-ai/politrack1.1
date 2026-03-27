@@ -186,13 +186,21 @@ export const VolunteerRegistrationFlow: React.FC<VolunteerRegistrationFlowProps>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Agama</label>
-                    <input 
+                    <select
                       name="agama"
                       value={formData.agama}
                       onChange={handleInputChange}
-                      placeholder="Agama"
-                      className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold-primary outline-none transition-all"
-                    />
+                      required
+                      className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold-primary outline-none transition-all appearance-none"
+                    >
+                      <option value="">-- Pilih Agama --</option>
+                      <option value="Islam">Islam</option>
+                      <option value="Kristen Protestan">Kristen Protestan</option>
+                      <option value="Katolik">Katolik</option>
+                      <option value="Hindu">Hindu</option>
+                      <option value="Buddha">Buddha</option>
+                      <option value="Konghucu">Konghucu</option>
+                    </select>
                   </div>
                 </div>
               </div>
