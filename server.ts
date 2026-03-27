@@ -24,7 +24,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
 
 const db = getFirestore(undefined, firebaseConfig.firestoreDatabaseId || "(default)");
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "" });
 const JWT_SECRET = process.env.JWT_SECRET || "politrack-super-secret-key";
 
 // Helper for NIK hashing
