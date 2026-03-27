@@ -12,6 +12,7 @@ import { SpeechGenerator } from './SpeechGenerator';
 import { LogisticsMap } from './LogisticsMap';
 import { FinancialDashboard } from './FinancialDashboard';
 import { VolunteerManagement } from './VolunteerManagement';
+import { VolunteerApproval } from './VolunteerApproval';
 import { ShieldAlert, ArrowLeft, Settings, Flag, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -65,13 +66,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, tenant, 
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4 border-b border-zinc-800 pb-4 overflow-x-auto no-scrollbar">
-              {['overview', 'targeting', 'logistics', 'intelligence', 'speech', 'finance', 'volunteers', 'war-room', 'campaign', 'witness', 'settings'].map(tab => (
+              {['overview', 'targeting', 'logistics', 'intelligence', 'speech', 'finance', 'volunteers', 'approval', 'war-room', 'campaign', 'witness', 'settings'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'text-tenant-primary border-b-2 border-tenant-primary' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
-                  {tab.replace('-', ' ')}
+                  {tab === 'approval' ? 'Approval Relawan' : tab.replace('-', ' ')}
                 </button>
               ))}
             </div>
@@ -111,6 +112,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, tenant, 
               {activeTab === 'volunteers' && (
                 <motion.div key="volunteers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                   <VolunteerManagement />
+                </motion.div>
+              )}
+              {activeTab === 'approval' && (
+                <motion.div key="approval" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                  <VolunteerApproval />
                 </motion.div>
               )}
               {activeTab === 'war-room' && (

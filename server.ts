@@ -841,6 +841,107 @@ async function startServer() {
     }
   });
 
+  // GET /api/users/pending — List all Pending volunteers for a tenant (Kandidat/Admin only)
+  app.get("/api/users/pending", async (req, res) => {
+    const tenantId = (req.headers["x-tenant-id"] as string) || "tenant_1";
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    try {
+      const result = await pgPool.query(
+        `SELECT id, name, phone, tenant_id, created_at FROM users
+         WHERE status = 'Pending' AND tenant_id = $1
+         ORDER BY created_at ASC`,
+        [tenantId]
+      );
+      // Enrich with Firestore profile fields (kecamatan, desa, pekerjaan, alasan)
+      const rows = await Promise.all(
+        result.rows.map(async (row) => {
+          try {
+            const docRef = db.collection("users").doc(String(row.id));
+            const docSnap = await docRef.get();
+            if (docSnap.exists) {
+              const d = docSnap.data()!;
+              return {
+                ...row,
+                kecamatan: d.kecamatan ?? null,
+                desa: d.desa ?? null,
+                pekerjaan: d.pekerjaan ?? null,
+                agama: d.agama ?? null,
+                alasan: d.alasan_bergabung ?? null,
+              };
+            }
+          } catch {
+            // ignore Firestore errors for individual doc
+          }
+          return row;
+        })
+      );
+      res.json(rows);
+    } catch (err) {
+      console.error("Fetch pending error:", err);
+      res.status(500).json({ error: "Gagal memuat daftar pending" });
+    }
+  });
+
+  // PATCH /api/users/approve/:id — Hash password, set status Active, update Firestore
+  app.patch("/api/users/approve/:id", async (req, res) => {
+    const { id } = req.params;
+    const { new_password } = req.body;
+    const tenantId = (req.headers["x-tenant-id"] as string) || "tenant_1";
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: "Password baru terlalu pendek" });
+    }
+    try {
+      // Hash the new password
+      const password_hash = await bcryptjs.hash(new_password, 12);
+      // Update PostgreSQL
+      const updateRes = await pgPool.query(
+        `UPDATE users SET password_hash = $1, status = 'Active'
+         WHERE id = $2 AND tenant_id = $3 RETURNING id, name, phone`,
+        [password_hash, id, tenantId]
+      );
+      if (updateRes.rowCount === 0) {
+        return res.status(404).json({ error: "User tidak ditemukan atau bukan tenant ini" });
+      }
+      const updatedUser = updateRes.rows[0];
+      // Sync to Firestore: users collection, doc ID = PostgreSQL id
+      try {
+        const docRef = db.collection("users").doc(String(id));
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          await docRef.update({
+            is_active: true,
+            status: "Active",
+            approvedBy: decoded.uid ?? "system",
+            approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (fsErr) {
+        console.warn("Firestore sync failed (non-fatal):", fsErr);
+      }
+      await logAudit(decoded.uid ?? "system", `APPROVE_VOLUNTEER:${id}`, req);
+      res.json({ message: "Akun berhasil diaktifkan", id, name: updatedUser.name });
+    } catch (err) {
+      console.error("Approve volunteer error:", err);
+      res.status(500).json({ error: "Gagal mengaktifkan akun" });
+    }
+  });
+
   // DELETE /api/users/:id: Delete a user (volunteer) record.
   app.delete("/api/users/:id", tenantIsolationMiddleware, async (req, res) => {
     const { tenantId, role: adminRole, uid: adminUid } = (req as any);
