@@ -47,13 +47,13 @@ export const LogisticsMap: React.FC = () => {
     };
 
     Promise.all([
-      fetch('/api/analytics/logistics-map', { headers }).then(res => res.json()),
-      fetch('/api/analytics/top-locations', { headers }).then(res => res.json()),
-      fetch('/api/analytics/dominant-profession', { headers }).then(res => res.json())
+      fetch('/api/analytics/logistics-map', { headers }).then(res => res.json()).catch(() => []),
+      fetch('/api/analytics/top-locations', { headers }).then(res => res.json()).catch(() => ({})),
+      fetch('/api/analytics/dominant-profession', { headers }).then(res => res.json()).catch(() => [])
     ]).then(([mapData, topData, domData]) => {
-      setDensityData(mapData);
-      setTopLocations(topData);
-      setDominantData(domData);
+      setDensityData(Array.isArray(mapData) ? mapData : []);
+      setTopLocations(topData && typeof topData === 'object' && !Array.isArray(topData) ? topData : {});
+      setDominantData(Array.isArray(domData) ? domData : []);
       setLoading(false);
     }).catch(err => {
       console.error("Logistics fetch error:", err);
