@@ -17,7 +17,7 @@ const MOCK_TENANT: Tenant = {
 };
 
 const ROLE_MAP: Record<string, UserRole> = {
-  Admin: UserRole.KANDIDAT,
+  ADMIN: UserRole.KANDIDAT,
   KANDIDAT: UserRole.KANDIDAT,
   KOORCAM: UserRole.KOORCAM,
   DATA_ENTRY: UserRole.DATA_ENTRY,
@@ -25,10 +25,11 @@ const ROLE_MAP: Record<string, UserRole> = {
 };
 
 function buildUserFromSession(raw: any): User {
+  const normalizedRole = (raw.role || '').toUpperCase().replace(/[\s-]/g, '_');
   return {
     id: raw.id || 'usr_001',
     email: raw.phone ? `${raw.phone}@politrack.id` : 'admin@politrack.id',
-    role: ROLE_MAP[raw.role] || UserRole.KANDIDAT,
+    role: ROLE_MAP[normalizedRole] || UserRole.KANDIDAT,
     tenantId: raw.tenantId || 'tenant_1',
     nama_lengkap: raw.name || 'Administrator',
     no_telp: raw.no_telp || raw.phone || '',
