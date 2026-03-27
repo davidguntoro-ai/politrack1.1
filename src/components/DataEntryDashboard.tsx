@@ -222,7 +222,7 @@ export const VoterInputForm: React.FC = () => {
         setShowReview(false);
         setFields({ name: '', nik: '', phone: '', pekerjaan: '', kecamatan: '', kelurahan: '', address: '' });
         setLocation(null);
-        setGpsState('idle');
+        fetchGps();
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err: any) {

@@ -144,6 +144,42 @@ def init_db():
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully.")
+
+        # Migration: add GPS columns to existing tables if not present
+        with engine.connect() as conn:
+            if DATABASE_URL.startswith("sqlite"):
+                # SQLite: check via PRAGMA
+                voters_cols = [row[1] for row in conn.execute(__import__('sqlalchemy').text("PRAGMA table_info(voters)")).fetchall()]
+                surveys_cols = [row[1] for row in conn.execute(__import__('sqlalchemy').text("PRAGMA table_info(surveys)")).fetchall()]
+                if "latitude" not in voters_cols:
+                    conn.execute(__import__('sqlalchemy').text("ALTER TABLE voters ADD COLUMN latitude FLOAT"))
+                    logger.info("Migration: added latitude to voters")
+                if "longitude" not in voters_cols:
+                    conn.execute(__import__('sqlalchemy').text("ALTER TABLE voters ADD COLUMN longitude FLOAT"))
+                    logger.info("Migration: added longitude to voters")
+                if "latitude" not in surveys_cols:
+                    conn.execute(__import__('sqlalchemy').text("ALTER TABLE surveys ADD COLUMN latitude FLOAT"))
+                    logger.info("Migration: added latitude to surveys")
+                if "longitude" not in surveys_cols:
+                    conn.execute(__import__('sqlalchemy').text("ALTER TABLE surveys ADD COLUMN longitude FLOAT"))
+                    logger.info("Migration: added longitude to surveys")
+            else:
+                # PostgreSQL: ADD COLUMN IF NOT EXISTS
+                migrations = [
+                    "ALTER TABLE voters ADD COLUMN IF NOT EXISTS latitude FLOAT",
+                    "ALTER TABLE voters ADD COLUMN IF NOT EXISTS longitude FLOAT",
+                    "ALTER TABLE surveys ADD COLUMN IF NOT EXISTS latitude FLOAT",
+                    "ALTER TABLE surveys ADD COLUMN IF NOT EXISTS longitude FLOAT",
+                    "ALTER TABLE surveys ADD COLUMN IF NOT EXISTS accuracy FLOAT",
+                ]
+                for sql in migrations:
+                    try:
+                        conn.execute(__import__('sqlalchemy').text(sql))
+                        conn.commit()
+                    except Exception as col_err:
+                        logger.warning(f"Migration skipped (may already exist): {col_err}")
+            conn.commit()
+        logger.info("GPS column migration complete.")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
 
