@@ -495,6 +495,70 @@ async function startServer() {
     }
   });
 
+  // GET /api/users/me — Return current user's profile
+  app.get("/api/users/me", async (req, res) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+      const userDoc = await db.collection("users").doc(decoded.uid).get();
+      if (!userDoc.exists) return res.status(404).json({ error: "User not found" });
+      const { nik_encrypted, ...safeData } = userDoc.data() as any;
+      res.json({ id: userDoc.id, ...safeData });
+    } catch {
+      res.status(401).json({ error: "Invalid token" });
+    }
+  });
+
+  // PUT /api/users/me — Update current user's profile
+  app.put("/api/users/me", async (req, res) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+      const allowed = ["nama_lengkap", "email", "no_telp", "pekerjaan", "alamat", "deskripsi_pribadi"];
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      await db.collection("users").doc(decoded.uid).update({
+        ...updates,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      res.json({ message: "Profil berhasil diperbarui", ...updates });
+    } catch {
+      res.status(401).json({ error: "Invalid token" });
+    }
+  });
+
+  // PATCH /api/users/:id — Partial update for a user record (admin/koorcam)
+  app.patch("/api/users/:id", tenantIsolationMiddleware, async (req, res) => {
+    const { tenantId, role: adminRole } = (req as any);
+    const { id } = req.params;
+    if (adminRole === "RELAWAN") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    try {
+      const userDocRef = db.collection("users").doc(id);
+      const userDoc = await userDocRef.get();
+      if (!userDoc.exists || userDoc.data()?.tenantId !== tenantId) {
+        return res.status(404).json({ error: "User tidak ditemukan" });
+      }
+      const allowed = ["nama_lengkap", "no_telp", "alamat", "pekerjaan", "domisili", "tps_target"];
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      await userDocRef.update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      res.json({ message: "User berhasil diperbarui", ...updates });
+    } catch (error) {
+      console.error("Patch user error:", error);
+      res.status(500).json({ error: "Gagal memperbarui user" });
+    }
+  });
+
   // 6. Multi-Level Command Hierarchy: GET /voters with ScopeInterceptor
   app.get("/api/voters", async (req, res) => {
     const tenantId = (req as any).tenantId;

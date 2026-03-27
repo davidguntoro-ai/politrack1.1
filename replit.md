@@ -21,6 +21,12 @@ A political intelligence and campaign management platform built as a SaaS system
 - Geo-fencing for volunteer activity monitoring
 - War Room: real-time TPS result monitoring
 - WebSocket-based real-time communication
+- Global toast notification system (`src/components/Toast.tsx`)
+- Axios API service with 401 auto-redirect (`src/services/api.ts`)
+- Profile edit modal in TopBar (PUT /api/users/me)
+- Logout with localStorage/sessionStorage clear
+- Full loading states on all form submissions and async actions
+- Edit volunteer modal (PATCH /api/users/:id)
 
 ## Development
 
