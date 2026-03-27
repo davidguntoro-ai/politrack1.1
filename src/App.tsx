@@ -31,6 +31,9 @@ function buildUserFromSession(raw: any): User {
     role: ROLE_MAP[raw.role] || UserRole.KANDIDAT,
     tenantId: raw.tenantId || 'tenant_1',
     nama_lengkap: raw.name || 'Administrator',
+    no_telp: raw.no_telp || raw.phone || '',
+    pekerjaan: raw.pekerjaan || '',
+    foto_profil_url: raw.foto_profil_url || '',
   };
 }
 
@@ -86,10 +89,13 @@ export default function App() {
       const updated = { ...prev, ...patch };
       localStorage.setItem('politrack_user', JSON.stringify({
         id: updated.id,
-        phone: updated.email?.split('@')[0],
+        phone: updated.no_telp || updated.email?.split('@')[0],
         name: updated.nama_lengkap,
         role: updated.role,
         tenantId: updated.tenantId,
+        foto_profil_url: updated.foto_profil_url || '',
+        no_telp: updated.no_telp || '',
+        pekerjaan: updated.pekerjaan || '',
       }));
       return updated;
     });

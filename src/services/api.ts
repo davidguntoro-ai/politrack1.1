@@ -3,7 +3,7 @@ import axios from 'axios';
 export const api = axios.create({ baseURL: '/' });
 
 api.interceptors.request.use(config => {
-  const token    = localStorage.getItem('token') || '';
+  const token    = localStorage.getItem('politrack_token') || localStorage.getItem('token') || '';
   const tenantId = localStorage.getItem('tenantId') || 'tenant_1';
   if (token) config.headers['Authorization'] = `Bearer ${token}`;
   config.headers['x-tenant-id'] = tenantId;

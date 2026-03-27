@@ -126,21 +126,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-t border-zinc-800/50">
         <div className={`flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="relative shrink-0">
-            <img
-              src={tenant.candidate_photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-              alt="Profile"
-              className="w-10 h-10 rounded-xl object-cover ring-2 ring-zinc-800"
-              referrerPolicy="no-referrer"
-            />
+            {user.foto_profil_url ? (
+              <img
+                src={user.foto_profil_url}
+                alt={user.nama_lengkap || user.email}
+                className="w-10 h-10 rounded-xl object-cover ring-2 ring-zinc-800"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#AA8A2E] flex items-center justify-center ring-2 ring-zinc-800">
+                <span className="text-white font-black text-sm">
+                  {(user.nama_lengkap || user.email)[0]?.toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#0B0F19] rounded-full" />
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-white truncate uppercase tracking-tighter">
-                {tenant.candidate_name || user.email.split('@')[0]}
+                {user.nama_lengkap || tenant.candidate_name || user.email.split('@')[0]}
               </p>
               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate">
-                {user.role}
+                {user.no_telp || user.role}
               </p>
             </div>
           )}
@@ -214,16 +222,21 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
     email: user.email,
     no_telp: user.no_telp || '',
     pekerjaan: user.pekerjaan || '',
+    foto_profil_url: user.foto_profil_url || '',
   });
   const { toast } = useToast();
 
-  const openProfile = () => {
+  React.useEffect(() => {
     setForm({
       nama_lengkap: user.nama_lengkap || user.email.split('@')[0],
       email: user.email,
       no_telp: user.no_telp || '',
       pekerjaan: user.pekerjaan || '',
+      foto_profil_url: user.foto_profil_url || '',
     });
+  }, [user]);
+
+  const openProfile = () => {
     setIsProfileOpen(true);
   };
 
@@ -244,12 +257,16 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
         email: form.email,
         no_telp: form.no_telp,
         pekerjaan: form.pekerjaan,
+        foto_profil_url: form.foto_profil_url,
       });
       setIsSaving(false);
       setIsProfileOpen(false);
       toast('Profil berhasil disimpan.', 'success');
     }
   };
+
+  const displayName = user.nama_lengkap || user.email.split('@')[0];
+  const avatarLetter = displayName[0]?.toUpperCase() || '?';
 
   return (
     <>
@@ -267,16 +284,22 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-black text-white uppercase tracking-tighter">{user.email}</span>
+              <span className="text-xs font-black text-white uppercase tracking-tighter">
+                {user.no_telp || user.email}
+              </span>
             </div>
             <span className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest">{user.role}</span>
           </div>
           <button
             onClick={openProfile}
             title="Edit Profil"
-            className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-black text-[#D4AF37] shadow-lg hover:bg-zinc-800 hover:border-[#D4AF37]/40 transition-all"
+            className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center font-black text-[#D4AF37] shadow-lg hover:border-[#D4AF37]/40 transition-all"
           >
-            {user.email[0].toUpperCase()}
+            {user.foto_profil_url ? (
+              <img src={user.foto_profil_url} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              avatarLetter
+            )}
           </button>
         </div>
       </header>
@@ -299,16 +322,23 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
               className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] overflow-hidden shadow-2xl"
             >
               {/* Modal Header */}
-              <div className="p-8 border-b border-zinc-800 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-black uppercase tracking-tighter text-white">Edit Profil</h3>
+              <div className="p-8 border-b border-zinc-800 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center shrink-0">
+                  {form.foto_profil_url ? (
+                    <img src={form.foto_profil_url} alt={form.nama_lengkap} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-black text-[#D4AF37]">{form.nama_lengkap[0]?.toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-black uppercase tracking-tighter text-white truncate">{form.nama_lengkap || 'Edit Profil'}</h3>
                   <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    {user.email} · {user.role}
+                    {user.role}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsProfileOpen(false)}
-                  className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
+                  className="p-2 hover:bg-zinc-800 rounded-full transition-colors shrink-0"
                 >
                   <X className="w-5 h-5 text-zinc-500" />
                 </button>
@@ -317,21 +347,22 @@ export const TopBar: React.FC<TopBarProps> = ({ user, isCollapsed, onUpdateUser 
               {/* Modal Body */}
               <form onSubmit={handleSave} className="p-8 space-y-5">
                 <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Foto Profil (URL)</label>
+                  <input
+                    type="url"
+                    value={form.foto_profil_url}
+                    onChange={e => setForm({ ...form, foto_profil_url: e.target.value })}
+                    placeholder="https://..."
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white placeholder-zinc-700"
+                  />
+                </div>
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nama Lengkap</label>
                   <input
                     required
                     type="text"
                     value={form.nama_lengkap}
                     onChange={e => setForm({ ...form, nama_lengkap: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 text-sm focus:border-[#D4AF37] outline-none transition-all text-white"
                   />
                 </div>
