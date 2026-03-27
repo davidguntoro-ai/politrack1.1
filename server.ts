@@ -3,7 +3,7 @@ import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json" with { type: "json" };
 
@@ -42,17 +42,11 @@ const generateRelawanCode = (tenantId: string, nik: string) => {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || "5000", 10);
 
-  // 1. Implement CORS Middleware restricted to .politrack.id
+  // 1. Implement CORS Middleware - allow all origins in dev
   app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin || /\.politrack\.id$/.test(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true,
     credentials: true
   }));
 
@@ -91,6 +85,10 @@ async function startServer() {
 
   // Middleware: Tenant Isolation & Intrusion Detection
   const tenantIsolationMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Skip for non-API routes (let Vite serve frontend assets)
+    if (!req.path.startsWith("/api/")) {
+      return next();
+    }
     // Skip for auth/register and public relawan registration
     if (req.path.startsWith("/api/auth") || req.path.startsWith("/api/tenants/register") || req.path === "/api/register-relawan") {
       return next();

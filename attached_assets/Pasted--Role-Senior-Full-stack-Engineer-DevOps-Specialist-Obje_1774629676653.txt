@@ -1,0 +1,32 @@
+**Role:** Senior Full-stack Engineer & DevOps Specialist.
+**Objective:** Fully stabilize and run the PoliTrack AI project on Replit with PostgreSQL and Vite Middleware integration.
+
+**1. Critical Frontend Fix (Vite Host Blocking):**
+- Locate the `createViteServer` call in `server.ts` (or the main server entry point).
+- **Action:** Pass `allowedHosts: ["all"]` directly into the inline configuration of `createViteServer()`. 
+- **Reason:** Inline options in `server.ts` override `vite.config.ts`. This is required to prevent the "Blocked request" host error on Replit's dynamic URLs.
+
+**2. Database & Environment Setup:**
+- Connect the FastAPI backend to Replit's PostgreSQL using `os.getenv("DATABASE_URL")`.
+- Ensure SQLAlchemy is configured with `pool_pre_ping=True` to handle Replit's database connection cycling.
+- Automatically run `Base.metadata.create_all(bind=engine)` at startup to initialize tables: 'users', 'voters', 'surveys', and 'logs'.
+
+**3. Reliability Fix (Background Worker):**
+- **Issue:** Prevent the "Continuous Runtime Crash" from the sentiment analysis background task.
+- **Fix:** Implement a **one-time connectivity probe** for Firestore/GCP at startup.
+- If connectivity fails or `GOOGLE_API_KEY` is missing, log a single warning "Sentiment Service Offline" and **disable/skip** the background interval entirely to keep logs clean.
+
+**4. Identity & User Profile Logic:**
+- Fully activate 'Edit Profile', 'Change Password', and 'Photo Upload' features using the PostgreSQL database.
+- **Auto-Admin Creation:** If the 'users' table is empty, automatically insert a default Admin:
+  - Phone: `08123456789`
+  - Password: `Admin123(ChangeMe)` (hashed using Bcrypt)
+  - Role: `Admin`
+  - Status: `Active`
+
+**5. Execution & Security:**
+- Ensure the server runs on `0.0.0.0` at port `8080`.
+- Verify that `GOOGLE_API_KEY` from Replit Secrets is injected into the AI Speech Generator module.
+
+**Deliverable:**
+Provide the updated `server.ts`, `main.py`, and `database.py`. Ensure the Webview loads the Login page without host errors and the console is free of 30-second error loops.
