@@ -7,12 +7,13 @@ import os
 import logging
 import io
 import pandas as pd
+import bcrypt
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 
 # Import Database Layer
-from database import get_db, init_db, seed_db, SessionLocal, Survey, Incident, TpsResult, Voter, UploadLog
+from database import get_db, init_db, seed_db, SessionLocal, Survey, Incident, TpsResult, Voter, UploadLog, User, Log
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -20,9 +21,29 @@ logger = logging.getLogger("politrack-api")
 
 # Initialize Database
 init_db()
-# Seed Database
+
+# Seed Database & Auto-create default Admin
 with SessionLocal() as db:
     seed_db(db)
+    # Auto-Admin Creation: insert default admin if users table is empty
+    if db.query(User).count() == 0:
+        try:
+            default_password = "Admin123(ChangeMe)"
+            hashed = bcrypt.hashpw(default_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            admin_user = User(
+                name="Administrator",
+                phone="08123456789",
+                password_hash=hashed,
+                role="Admin",
+                status="Active",
+                tenant_id="tenant_1",
+            )
+            db.add(admin_user)
+            db.commit()
+            logger.info("Default admin user created: phone=08123456789")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to create default admin: {e}")
 
 app = FastAPI(title="PoliTrack AI System")
 
@@ -704,6 +725,101 @@ async def submit_aspiration(aspiration: AspirationCreate, db: Session = Depends(
         logger.error(f"Error submitting aspiration: {e}")
         raise HTTPException(status_code=500, detail="Gagal mengirim aspirasi")
 
+# --- User Profile Endpoints ---
+
+class UserLogin(BaseModel):
+    phone: str
+    password: str
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+@app.post("/api/users/login")
+async def login_user(body: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.phone == body.phone, User.status == "Active").first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not bcrypt.checkpw(body.password.encode("utf-8"), user.password_hash.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {
+        "id": user.id,
+        "name": user.name,
+        "phone": user.phone,
+        "role": user.role,
+        "status": user.status,
+        "photo_url": user.photo_url,
+        "tenant_id": user.tenant_id,
+    }
+
+@app.get("/api/users/{user_id}")
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": user.id,
+        "name": user.name,
+        "phone": user.phone,
+        "role": user.role,
+        "status": user.status,
+        "photo_url": user.photo_url,
+        "tenant_id": user.tenant_id,
+    }
+
+@app.patch("/api/users/{user_id}/profile")
+async def update_profile(user_id: int, body: UserProfileUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if body.name is not None:
+        user.name = body.name
+    if body.phone is not None:
+        existing = db.query(User).filter(User.phone == body.phone, User.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Phone number already in use")
+        user.phone = body.phone
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "message": "Profile updated"}
+
+@app.patch("/api/users/{user_id}/password")
+async def change_password(user_id: int, body: PasswordChange, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not bcrypt.checkpw(body.current_password.encode("utf-8"), user.password_hash.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    user.password_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "message": "Password changed successfully"}
+
+@app.post("/api/users/{user_id}/photo")
+async def upload_photo(user_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, or WebP images are allowed")
+    import base64
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be under 5MB")
+    encoded = f"data:{file.content_type};base64,{base64.b64encode(contents).decode('utf-8')}"
+    user.photo_url = encoded
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"status": "success", "photo_url": user.photo_url}
+
+
 # --- Frontend Serving ---
 
 # Serve static files from 'dist' directory
@@ -716,5 +832,4 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
-    # Use port 3000 as per platform requirements
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)

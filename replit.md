@@ -26,10 +26,18 @@ A political intelligence and campaign management platform built as a SaaS system
 
 ```bash
 npm install
+pip install bcrypt
 npm run dev
 ```
 
 Server runs on **port 5000** serving both the Express API and the Vite React frontend.
+
+## Default Admin Credentials (PostgreSQL users table)
+
+Auto-created on first startup if the `users` table is empty:
+- **Phone:** `08123456789`
+- **Password:** `Admin123(ChangeMe)` (bcrypt hashed)
+- **Role:** Admin
 
 ## Package Manager
 

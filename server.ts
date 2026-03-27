@@ -1327,7 +1327,7 @@ _PoliTrack AI - Strategic Intelligence System_`;
     }
   });
 
-  // API: Sentiment Analysis Background Worker (Simulated via endpoint or interval)
+  // API: Sentiment Analysis Background Worker
   const runSentimentAnalysis = async () => {
     try {
       const pendingVoters = await db.collection("voters")
@@ -1340,7 +1340,7 @@ _PoliTrack AI - Strategic Intelligence System_`;
         console.log(`Analyzing sentiment for voter: ${voter.name}`);
 
         const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-2.0-flash",
           contents: `Analyze the sentiment of this political comment: "${voter.comment}". 
           Return ONLY a JSON object with "sentiment" (positive, negative, or neutral) and "score" (0 to 1).`,
           config: { responseMimeType: "application/json" }
@@ -1358,11 +1358,29 @@ _PoliTrack AI - Strategic Intelligence System_`;
     }
   };
 
-  // Run worker every 30 seconds
-  setInterval(runSentimentAnalysis, 30000);
+  // One-time connectivity probe before enabling the background worker
+  let sentimentWorkerEnabled = false;
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY not set");
+    }
+    // Probe Firestore connectivity with a lightweight read
+    await db.collection("_probe").limit(1).get();
+    sentimentWorkerEnabled = true;
+    console.log("[Sentiment Service] Online — background worker active.");
+  } catch (probeError) {
+    console.warn("[Sentiment Service] Offline — background worker disabled. Reason:", (probeError as Error).message);
+  }
+
+  if (sentimentWorkerEnabled) {
+    setInterval(runSentimentAnalysis, 30000);
+  }
 
   // API: Manual trigger for testing
   app.post("/api/analyze-sentiment", async (req, res) => {
+    if (!sentimentWorkerEnabled) {
+      return res.status(503).json({ status: "Sentiment Service Offline" });
+    }
     await runSentimentAnalysis();
     res.json({ status: "Worker triggered" });
   });
@@ -1370,7 +1388,11 @@ _PoliTrack AI - Strategic Intelligence System_`;
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        allowedHosts: "all",
+        host: "0.0.0.0",
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
