@@ -4,9 +4,10 @@ import { LogIn, Phone, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-re
 
 interface LoginPageProps {
   onLoginSuccess: (token: string, user: any) => void;
+  onGoToRegister: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onGoToRegister }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -142,6 +143,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </>
               )}
             </button>
+
+            <div className="pt-2 text-center">
+              <p className="text-zinc-600 text-xs">
+                Belum punya akun?{' '}
+                <button
+                  type="button"
+                  onClick={onGoToRegister}
+                  className="text-[#D4AF37] font-bold hover:underline transition-colors"
+                >
+                  Daftar jadi Relawan
+                </button>
+              </p>
+            </div>
           </form>
         </div>
 

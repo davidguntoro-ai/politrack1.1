@@ -46,9 +46,31 @@ const generateRelawanCode = (tenantId: string, nik: string) => {
   return `KND${tenantNum}-${shortNik}`;
 };
 
+async function initDatabase() {
+  try {
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id          SERIAL PRIMARY KEY,
+        name        TEXT NOT NULL,
+        phone       TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role        TEXT NOT NULL DEFAULT 'Relawan',
+        status      TEXT NOT NULL DEFAULT 'Pending',
+        tenant_id   TEXT NOT NULL DEFAULT 'tenant_1',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log("[DB] Users table ready.");
+  } catch (err) {
+    console.error("[DB] Failed to initialize users table:", err);
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "5000", 10);
+
+  await initDatabase();
 
   // 1. Implement CORS Middleware - allow all origins in dev
   app.use(cors({
@@ -338,6 +360,74 @@ async function startServer() {
     } catch (err) {
       console.error("Local login error:", err);
       return res.status(500).json({ error: "Authentication service unavailable" });
+    }
+  });
+
+  // POST /api/auth/register-volunteer: Public endpoint to register a new volunteer.
+  // Saves to PostgreSQL (for login) and Firestore (for profile). Status is 'Pending' by default.
+  app.post("/api/auth/register-volunteer", async (req, res) => {
+    const { name, phone, password, agama, pekerjaan, kecamatan, desa, alasan } = req.body;
+
+    if (!name || !phone || !password) {
+      return res.status(400).json({ error: "Nama, nomor WhatsApp, dan kata sandi wajib diisi" });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: "Kata sandi minimal 8 karakter" });
+    }
+
+    try {
+      // Duplicate phone check in PostgreSQL
+      const existing = await pgPool.query(
+        "SELECT id FROM users WHERE phone = $1 LIMIT 1",
+        [phone]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(409).json({ error: "Nomor WhatsApp sudah terdaftar di sistem" });
+      }
+
+      const password_hash = await bcryptjs.hash(password, 12);
+      const tenant_id = "tenant_1";
+
+      // Insert into PostgreSQL users table for authentication
+      const result = await pgPool.query(
+        `INSERT INTO users (name, phone, password_hash, role, status, tenant_id, created_at)
+         VALUES ($1, $2, $3, 'Relawan', 'Pending', $4, NOW())
+         RETURNING id`,
+        [name, phone, password_hash, tenant_id]
+      );
+      const userId = String(result.rows[0].id);
+
+      // Save extended profile to Firestore
+      await db.collection("users").doc(userId).set({
+        id: userId,
+        tenantId: tenant_id,
+        role: "RELAWAN",
+        name,
+        no_telp: phone,
+        agama: agama || null,
+        pekerjaan: pekerjaan || null,
+        kecamatan: kecamatan || null,
+        desa: desa || null,
+        alasan_bergabung: alasan || null,
+        status: "Pending",
+        is_active: false,
+        reliabilityScore: 100,
+        auditStatus: "clean",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await logAudit(userId, `REGISTER_VOLUNTEER_PENDING: ${phone}`, req);
+      res.json({ message: "Pendaftaran berhasil. Menunggu verifikasi admin.", id: userId });
+    } catch (err: any) {
+      console.error("Register volunteer error:", err);
+      if (err.code === "23505") {
+        return res.status(409).json({ error: "Nomor WhatsApp sudah terdaftar di sistem" });
+      }
+      // If users table doesn't exist yet, provide helpful error
+      if (err.code === "42P01") {
+        return res.status(503).json({ error: "Database belum siap. Hubungi administrator." });
+      }
+      res.status(500).json({ error: "Gagal mendaftarkan akun. Coba lagi." });
     }
   });
 

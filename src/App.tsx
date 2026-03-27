@@ -4,6 +4,7 @@ import { VoterInteractionModule } from './components/VoterInteractionModule';
 import { PublicMicrosite } from './components/PublicMicrosite';
 import { ToastProvider } from './components/Toast';
 import { LoginPage } from './components/LoginPage';
+import { RegisterPage } from './components/RegisterPage';
 import { User, UserRole, Tenant } from './types';
 import { Settings2, Smartphone, LayoutDashboard, Globe } from 'lucide-react';
 
@@ -52,6 +53,7 @@ function getStoredAuth(): { token: string; user: User } | null {
 export default function App() {
   const stored = getStoredAuth();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!stored);
+  const [page, setPage] = useState<'login' | 'register'>('login');
   const [user, setUser] = useState<User>(stored?.user ?? buildUserFromSession({}));
   const [tenant, setTenant] = useState<Tenant>(MOCK_TENANT);
   const [currentRole, setCurrentRole] = useState<UserRole>(stored?.user?.role ?? UserRole.KANDIDAT);
@@ -105,7 +107,14 @@ export default function App() {
   if (!isLoggedIn) {
     return (
       <ToastProvider>
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        {page === 'register' ? (
+          <RegisterPage onBack={() => setPage('login')} />
+        ) : (
+          <LoginPage
+            onLoginSuccess={handleLoginSuccess}
+            onGoToRegister={() => setPage('register')}
+          />
+        )}
       </ToastProvider>
     );
   }
