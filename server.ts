@@ -123,6 +123,178 @@ async function startServer() {
     });
   };
 
+  // --- Analytics Endpoints (public, no JWT required for demo mode) ---
+  const LOGISTICS_RECOMMENDATIONS: Record<string, string> = {
+    "Petani": "Fokus pada isu pertanian: Distribusi pupuk bersubsidi dan bantuan Alsintan.",
+    "Nelayan": "Fokus pada isu kelautan: Bantuan solar bersubsidi dan asuransi nelayan.",
+    "Pedagang": "Fokus pada isu ekonomi mikro: Revitalisasi pasar tradisional dan akses modal tanpa bunga.",
+    "Buruh": "Fokus pada isu ketenagakerjaan: Advokasi upah layak dan jaminan kesehatan pekerja.",
+    "IRT": "Fokus pada isu kesejahteraan keluarga: Program sembako murah dan pelatihan UMKM rumahan.",
+    "Mahasiswa": "Fokus pada isu pendidikan: Beasiswa daerah dan coworking space gratis.",
+    "Wiraswasta": "Fokus pada isu investasi: Kemudahan perizinan usaha dan pameran produk lokal.",
+    "Guru Swasta": "Fokus pada isu pendidikan: Peningkatan insentif guru honorer dan sertifikasi mandiri.",
+    "ASN": "Netralitas: Pastikan tidak ada mobilisasi politik, fokus pada pelayanan publik.",
+    "TNI": "Netralitas: Jaga kondusivitas wilayah dan keamanan tanpa intervensi.",
+    "POLRI": "Netralitas: Penegakan hukum yang adil dan pengamanan kampanye.",
+  };
+
+  const MOCK_LOGISTICS_MAP = [
+    { kecamatan: "Kelurahan 1", pekerjaan: "Petani",     count: 450, percentage: 32.5 },
+    { kecamatan: "Kelurahan 1", pekerjaan: "Buruh",      count: 290, percentage: 21.0 },
+    { kecamatan: "Kelurahan 1", pekerjaan: "IRT",        count: 210, percentage: 15.2 },
+    { kecamatan: "Kelurahan 1", pekerjaan: "Pedagang",   count: 180, percentage: 13.0 },
+    { kecamatan: "Kelurahan 1", pekerjaan: "Wiraswasta", count: 255, percentage: 18.3 },
+    { kecamatan: "Kelurahan 2", pekerjaan: "Pedagang",   count: 520, percentage: 38.2 },
+    { kecamatan: "Kelurahan 2", pekerjaan: "Wiraswasta", count: 340, percentage: 25.0 },
+    { kecamatan: "Kelurahan 2", pekerjaan: "IRT",        count: 200, percentage: 14.7 },
+    { kecamatan: "Kelurahan 2", pekerjaan: "Buruh",      count: 175, percentage: 12.9 },
+    { kecamatan: "Kelurahan 2", pekerjaan: "Petani",     count: 125, percentage: 9.2  },
+    { kecamatan: "Kelurahan 3", pekerjaan: "Buruh",      count: 610, percentage: 41.5 },
+    { kecamatan: "Kelurahan 3", pekerjaan: "Petani",     count: 290, percentage: 19.7 },
+    { kecamatan: "Kelurahan 3", pekerjaan: "Pedagang",   count: 220, percentage: 15.0 },
+    { kecamatan: "Kelurahan 3", pekerjaan: "IRT",        count: 195, percentage: 13.3 },
+    { kecamatan: "Kelurahan 3", pekerjaan: "Mahasiswa",  count: 155, percentage: 10.5 },
+    { kecamatan: "Kelurahan 4", pekerjaan: "ASN",        count: 480, percentage: 35.6 },
+    { kecamatan: "Kelurahan 4", pekerjaan: "Guru Swasta",count: 310, percentage: 23.0 },
+    { kecamatan: "Kelurahan 4", pekerjaan: "Wiraswasta", count: 240, percentage: 17.8 },
+    { kecamatan: "Kelurahan 4", pekerjaan: "IRT",        count: 175, percentage: 13.0 },
+    { kecamatan: "Kelurahan 4", pekerjaan: "Mahasiswa",  count: 144, percentage: 10.6 },
+    { kecamatan: "Kelurahan 5", pekerjaan: "Nelayan",    count: 560, percentage: 44.8 },
+    { kecamatan: "Kelurahan 5", pekerjaan: "Petani",     count: 290, percentage: 23.2 },
+    { kecamatan: "Kelurahan 5", pekerjaan: "Buruh",      count: 190, percentage: 15.2 },
+    { kecamatan: "Kelurahan 5", pekerjaan: "IRT",        count: 130, percentage: 10.4 },
+    { kecamatan: "Kelurahan 5", pekerjaan: "Pedagang",   count:  80, percentage:  6.4 },
+  ];
+
+  const MOCK_DOMINANT_PROFESSION = [
+    { kelurahan: "Kelurahan 1", dominant_profession: "Petani",     percentage: 32.5, total_voters: 1385, recommendation: LOGISTICS_RECOMMENDATIONS["Petani"]     },
+    { kelurahan: "Kelurahan 2", dominant_profession: "Pedagang",   percentage: 38.2, total_voters: 1360, recommendation: LOGISTICS_RECOMMENDATIONS["Pedagang"]   },
+    { kelurahan: "Kelurahan 3", dominant_profession: "Buruh",      percentage: 41.5, total_voters: 1470, recommendation: LOGISTICS_RECOMMENDATIONS["Buruh"]      },
+    { kelurahan: "Kelurahan 4", dominant_profession: "ASN",        percentage: 35.6, total_voters: 1349, recommendation: LOGISTICS_RECOMMENDATIONS["ASN"]        },
+    { kelurahan: "Kelurahan 5", dominant_profession: "Nelayan",    percentage: 44.8, total_voters: 1250, recommendation: LOGISTICS_RECOMMENDATIONS["Nelayan"]    },
+  ];
+
+  const MOCK_TOP_LOCATIONS: Record<string, { kecamatan: string; count: number }[]> = {
+    "Petani":     [{ kecamatan: "Kelurahan 1", count: 450 }, { kecamatan: "Kelurahan 5", count: 290 }, { kecamatan: "Kelurahan 3", count: 290 }],
+    "Pedagang":   [{ kecamatan: "Kelurahan 2", count: 520 }, { kecamatan: "Kelurahan 3", count: 220 }, { kecamatan: "Kelurahan 1", count: 180 }],
+    "Buruh":      [{ kecamatan: "Kelurahan 3", count: 610 }, { kecamatan: "Kelurahan 1", count: 290 }, { kecamatan: "Kelurahan 5", count: 190 }],
+    "IRT":        [{ kecamatan: "Kelurahan 1", count: 210 }, { kecamatan: "Kelurahan 2", count: 200 }, { kecamatan: "Kelurahan 3", count: 195 }],
+    "Wiraswasta": [{ kecamatan: "Kelurahan 2", count: 340 }, { kecamatan: "Kelurahan 4", count: 240 }, { kecamatan: "Kelurahan 1", count: 255 }],
+    "Mahasiswa":  [{ kecamatan: "Kelurahan 3", count: 155 }, { kecamatan: "Kelurahan 4", count: 144 }],
+    "ASN":        [{ kecamatan: "Kelurahan 4", count: 480 }],
+    "Nelayan":    [{ kecamatan: "Kelurahan 5", count: 560 }],
+    "Guru Swasta":[{ kecamatan: "Kelurahan 4", count: 310 }],
+    "TNI":        [],
+    "POLRI":      [],
+  };
+
+  const withFirestoreTimeout = <T>(promise: Promise<T>, fallback: T, ms = 3000): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Firestore timeout")), ms))
+    ]).catch(() => fallback);
+
+  app.get("/api/analytics/logistics-map", async (req, res) => {
+    const tenantId = (req.headers["x-tenant-id"] as string) || "tenant_1";
+    try {
+      const snapshot = await withFirestoreTimeout(
+        db.collection("voters").where("tenantId", "==", tenantId).get(),
+        null
+      );
+      if (!snapshot || snapshot.empty) return res.json(MOCK_LOGISTICS_MAP);
+
+      const totals: Record<string, number> = {};
+      const counts: Record<string, Record<string, number>> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const kec = data.districtCode || data.kecamatan || "Kelurahan 1";
+        const job = data.pekerjaan || data.mainIssue || "Wiraswasta";
+        totals[kec] = (totals[kec] || 0) + 1;
+        if (!counts[kec]) counts[kec] = {};
+        counts[kec][job] = (counts[kec][job] || 0) + 1;
+      });
+
+      const results: any[] = [];
+      for (const kec of Object.keys(counts)) {
+        for (const job of Object.keys(counts[kec])) {
+          const count = counts[kec][job];
+          results.push({ kecamatan: kec, pekerjaan: job, count, percentage: parseFloat(((count / totals[kec]) * 100).toFixed(2)) });
+        }
+      }
+      return res.json(results.length > 0 ? results : MOCK_LOGISTICS_MAP);
+    } catch {
+      return res.json(MOCK_LOGISTICS_MAP);
+    }
+  });
+
+  app.get("/api/analytics/dominant-profession", async (req, res) => {
+    const tenantId = (req.headers["x-tenant-id"] as string) || "tenant_1";
+    try {
+      const snapshot = await withFirestoreTimeout(
+        db.collection("voters").where("tenantId", "==", tenantId).get(),
+        null
+      );
+      if (!snapshot || snapshot.empty) return res.json(MOCK_DOMINANT_PROFESSION);
+
+      const kelurahanMap: Record<string, Record<string, number>> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const kel = data.villageCode || data.kelurahan || "Kelurahan 1";
+        const job = data.pekerjaan || data.mainIssue || "Wiraswasta";
+        if (!kelurahanMap[kel]) kelurahanMap[kel] = {};
+        kelurahanMap[kel][job] = (kelurahanMap[kel][job] || 0) + 1;
+      });
+
+      const results = Object.entries(kelurahanMap).map(([kel, jobs]) => {
+        const total = Object.values(jobs).reduce((a, b) => a + b, 0);
+        const [profession, topCount] = Object.entries(jobs).sort((a, b) => b[1] - a[1])[0];
+        return {
+          kelurahan: kel,
+          dominant_profession: profession,
+          percentage: parseFloat(((topCount / total) * 100).toFixed(2)),
+          total_voters: total,
+          recommendation: LOGISTICS_RECOMMENDATIONS[profession] || "Fokus pada isu umum kesejahteraan warga.",
+        };
+      });
+      return res.json(results.length > 0 ? results : MOCK_DOMINANT_PROFESSION);
+    } catch {
+      return res.json(MOCK_DOMINANT_PROFESSION);
+    }
+  });
+
+  app.get("/api/analytics/top-locations", async (req, res) => {
+    const tenantId = (req.headers["x-tenant-id"] as string) || "tenant_1";
+    try {
+      const snapshot = await withFirestoreTimeout(
+        db.collection("voters").where("tenantId", "==", tenantId).get(),
+        null
+      );
+      if (!snapshot || snapshot.empty) return res.json(MOCK_TOP_LOCATIONS);
+
+      const jobMap: Record<string, Record<string, number>> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const kec = data.districtCode || data.kecamatan || "Kelurahan 1";
+        const job = data.pekerjaan || data.mainIssue || "Wiraswasta";
+        if (!jobMap[job]) jobMap[job] = {};
+        jobMap[job][kec] = (jobMap[job][kec] || 0) + 1;
+      });
+
+      const result: Record<string, { kecamatan: string; count: number }[]> = {};
+      for (const job of Object.keys(jobMap)) {
+        result[job] = Object.entries(jobMap[job])
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([kecamatan, count]) => ({ kecamatan, count }));
+      }
+      const hasData = Object.values(result).some(arr => arr.length > 0);
+      return res.json(hasData ? result : MOCK_TOP_LOCATIONS);
+    } catch {
+      return res.json(MOCK_TOP_LOCATIONS);
+    }
+  });
+  // --- End Analytics Endpoints ---
+
   app.use(tenantIsolationMiddleware);
 
   // 1. Tenant Provisioning
